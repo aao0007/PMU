@@ -1,6 +1,0 @@
-2026-05-17 03:05:22 | INFO | main:main:16 - Iniciando Elden Ring Armor Studio...
-2026-05-17 03:05:22 | DEBUG | parts_explorer_panel:perform_database_search:52 - Ejecutando búsqueda de armaduras con query: ''
-2026-05-17 03:05:48 | INFO | modengine2:update_mods_list:56 - config_eldenring.toml actualizado correctamente.
-2026-05-17 03:06:27 | INFO | scraper_service:populate_mock_data:12 - Iniciando inyección de datos del catálogo de armaduras...
-2026-05-17 03:06:27 | INFO | scraper_service:populate_mock_data:35 - Base de datos poblada con éxito.
-2026-05-17 03:06:27 | DEBUG | parts_explorer_panel:perform_database_search:52 - Ejecutando búsqueda de armaduras con query: ''

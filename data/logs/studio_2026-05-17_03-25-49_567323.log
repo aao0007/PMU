@@ -1,9 +1,0 @@
-2026-05-17 03:25:49 | INFO | main:main:16 - Iniciando Elden Ring Armor Studio...
-2026-05-17 03:25:49 | DEBUG | parts_explorer_panel:perform_database_search:52 - Ejecutando búsqueda de armaduras con query: ''
-2026-05-17 03:25:56 | INFO | witchy_service:process_file:22 - WitchyBND procesando: bd_m_1361_l.partsbnd.dcx
-2026-05-17 03:25:56 | INFO | witchy_service:process_file:40 - WitchyBND completado: bd_m_1361_l.partsbnd.dcx
-2026-05-17 03:25:56 | INFO | main_window:load_model_into_viewer:155 - Buscando geometría .flver en los archivos extraídos...
-2026-05-17 03:25:56 | INFO | main_window:load_model_into_viewer:169 - FLVER encontrado: ElfDGBD.flver. Iniciando parseo...
-2026-05-17 03:25:56 | INFO | flver_parser:extract_geometry_for_gl:16 - Leyendo estructura binaria directa desde: ElfDGBD.flver
-2026-05-17 03:25:56 | DEBUG | flver_parser:extract_geometry_for_gl:32 - FLVER Header: Meshes=0, Buffers=10
-2026-05-17 03:25:56 | INFO | flver_parser:extract_geometry_for_gl:88 - Geometría binaria procesada nativamente: 35965 vértices.

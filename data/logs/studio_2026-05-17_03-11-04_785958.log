@@ -1,8 +1,0 @@
-2026-05-17 03:11:04 | INFO | main:main:16 - Iniciando Elden Ring Armor Studio...
-2026-05-17 03:11:04 | DEBUG | parts_explorer_panel:perform_database_search:52 - Ejecutando búsqueda de armaduras con query: ''
-2026-05-17 03:11:06 | INFO | witchy_service:process_file:22 - WitchyBND procesando: am_m_1360.partsbnd.dcx
-2026-05-17 03:11:10 | ERROR | witchy_service:process_file:40 - WitchyBND falló (3762504530): Unhandled exception. System.NullReferenceException: Object reference not set to an instance of an object.
-   at WitchyBND.Program.<>c__DisplayClass5_0.<Main>b__1(CliOptions opt) in ./WitchyBND/Program.cs:line 200
-   at CommandLine.ParserResultExtensions.WithParsed[T](ParserResult`1 result, Action`1 action)
-   at WitchyBND.Program.Main(String[] args) in ./WitchyBND/Program.cs:line 51
-

@@ -8,6 +8,8 @@ requirements.txt
 
 # Carpeta tools
 tools/
+parts/
+data/
 
 # Python cache
 __pycache__/
