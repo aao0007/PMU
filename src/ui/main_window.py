@@ -22,6 +22,7 @@ from src.ui.panels.parts_explorer_panel import PartsExplorerPanel
 from src.ui.panels.tools_panel import ToolsPanel
 from src.ui.dialogs.settings_dialog import SettingsDialog
 from src.utils.theme import apply_dark_theme
+from src.utils.async_runner import run_in_background
 
 TEMP_DIR = Path("data/temp_extract")
 
@@ -29,25 +30,20 @@ TEMP_DIR = Path("data/temp_extract")
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("⚔ Elden Ring Armor Studio")
-        self.resize(1600, 960)
+        self.setWindowTitle("⚔  Elden Ring Armor Studio")
+        self.resize(1650, 980)
         self.setMinimumSize(1000, 700)
 
-        # ── Servicios ─────────────────────────────────────────────────────────
-        self._db            = ArmorDatabase()
-        self._witchy        = WitchyBNDService()
-        self._flver_editor  = FLVEREditorService()
-        self._duplicator    = IDDuplicator(self._witchy)
+        self._db           = ArmorDatabase()
+        self._witchy       = WitchyBNDService()
+        self._flver_editor = FLVEREditorService()
 
-        # ── UI ────────────────────────────────────────────────────────────────
         self._build_ui()
         apply_dark_theme(QApplication.instance())
-
-        # ── Post-init ─────────────────────────────────────────────────────────
-        QTimer.singleShot(300, self._post_init)
+        QTimer.singleShot(400, self._post_init)
 
     # ─────────────────────────────────────────────────────────────────────────
-    # Build UI
+    # Build
     # ─────────────────────────────────────────────────────────────────────────
 
     def _build_ui(self):
@@ -60,26 +56,25 @@ class MainWindow(QMainWindow):
         # ── Menú ──────────────────────────────────────────────────────────────
         mb = QMenuBar(self)
 
-        # Archivo
-        m_file = mb.addMenu("Archivo")
-        m_file.addAction("⚙ Configuración...", self._open_settings, "Ctrl+,")
-        m_file.addSeparator()
-        m_file.addAction("❌ Salir", self.close, "Ctrl+Q")
+        mf = mb.addMenu("Archivo")
+        mf.addAction("⚙  Configuración…", self._open_settings, "Ctrl+,")
+        mf.addSeparator()
+        mf.addAction("❌ Salir", self.close, "Ctrl+Q")
 
-        # Base de datos
-        m_db = mb.addMenu("Base de datos")
-        m_db.addAction("📥 Cargar datos de prueba", self._populate_db)
-        m_db.addAction("🔄 Limpiar y recargar", self._reload_db)
+        mdb = mb.addMenu("Base de datos")
+        mdb.addAction("📥 Cargar catálogo de prueba", self._populate_db)
+        mdb.addAction("🔄 Limpiar y recargar", self._reload_db)
 
-        # Ver
-        m_view = mb.addMenu("Ver")
-        m_view.addAction("🔄 Actualizar árbol de archivos", self._refresh_trees)
-        m_view.addAction("Wireframe [W]", self._toggle_wireframe, "W")
-        m_view.addAction("Reset cámara [R]", self._reset_camera, "R")
+        mv = mb.addMenu("Visor")
+        mv.addAction("Wireframe  [W]",      lambda: self._central.gl_viewer.set_wireframe(not self._central.gl_viewer.wireframe), "W")
+        mv.addAction("Reset cámara  [R]",   lambda: self._central.gl_viewer.reset_camera(), "R")
+        mv.addAction("Vista frontal  [1]",  lambda: self._view_preset(0.0, 0.0))
+        mv.addAction("Vista lateral  [3]",  lambda: self._view_preset(-3.14159/2, 0.0))
+        mv.addAction("Vista superior [7]",  lambda: self._view_preset(0.0, 1.47))
 
-        # Ayuda
-        m_help = mb.addMenu("Ayuda")
-        m_help.addAction("ℹ Acerca de", self._about)
+        mh = mb.addMenu("Ayuda")
+        mh.addAction("🎮 Controles de navegación", self._show_controls)
+        mh.addAction("ℹ  Acerca de",               self._about)
 
         self.setMenuBar(mb)
 
@@ -88,106 +83,104 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self._central)
 
         # Conectar duplicación
-        self._central.slot_selector.duplicate_requested.connect(self._on_duplicate_requested)
+        self._central.slot_selector.duplicate_requested.connect(self._on_duplicate)
 
-        # ── Dock Izquierdo: árbol de archivos ─────────────────────────────────
-        self._file_tree = FileTreePanel()
-        self._file_tree.file_selected.connect(self._on_file_selected)
+        # ── Dock izquierdo: árbol de archivos ──────────────────────────────────
+        self._tree = FileTreePanel()
+        self._tree.file_selected.connect(self._on_file_selected)
 
-        dock_tree = QDockWidget("📁 Archivos", self)
+        dock_tree = QDockWidget("📁  Archivos", self)
         dock_tree.setObjectName("dock_tree")
-        dock_tree.setWidget(self._file_tree)
+        dock_tree.setWidget(self._tree)
         dock_tree.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
-        dock_tree.setMinimumWidth(240)
+        dock_tree.setMinimumWidth(230)
         self.addDockWidget(Qt.LeftDockWidgetArea, dock_tree)
 
-        # ── Dock Derecho: herramientas ─────────────────────────────────────────
+        # ── Dock derecho: herramientas ─────────────────────────────────────────
         self._tools = ToolsPanel(self._db)
         self._tools.set_viewer(self._central.gl_viewer)
 
-        dock_tools = QDockWidget("🔧 Herramientas", self)
+        dock_tools = QDockWidget("🔧  Herramientas", self)
         dock_tools.setObjectName("dock_tools")
         dock_tools.setWidget(self._tools)
         dock_tools.setAllowedAreas(Qt.RightDockWidgetArea | Qt.LeftDockWidgetArea)
-        dock_tools.setMinimumWidth(220)
-        dock_tools.setMaximumWidth(320)
+        dock_tools.setMinimumWidth(200)
+        dock_tools.setMaximumWidth(310)
         self.addDockWidget(Qt.RightDockWidgetArea, dock_tools)
 
-        # ── Dock Inferior: explorador de armaduras ────────────────────────────
+        # ── Dock inferior: explorador de armaduras ─────────────────────────────
         self._explorer = PartsExplorerPanel(self._db)
-        self._explorer.model_selected.connect(self._on_explorer_model_selected)
+        self._explorer.model_selected.connect(self._on_explorer_selected)
 
-        dock_exp = QDockWidget("🗂 Explorador de Armaduras (DB)", self)
+        dock_exp = QDockWidget("🗂  Explorador de Armaduras (DB)", self)
         dock_exp.setObjectName("dock_explorer")
         dock_exp.setWidget(self._explorer)
         dock_exp.setAllowedAreas(Qt.BottomDockWidgetArea | Qt.TopDockWidgetArea)
         self.addDockWidget(Qt.BottomDockWidgetArea, dock_exp)
 
         # ── Status bar ────────────────────────────────────────────────────────
-        self._status = QStatusBar(self)
-        self._status.setStyleSheet("QStatusBar { background:#1A3A5A; color:#DDD; font-size:12px; }")
-        self.setStatusBar(self._status)
-        self._status.showMessage("Listo — Elden Ring Armor Studio")
+        self._sb = QStatusBar(self)
+        self._sb.setStyleSheet("QStatusBar{background:#0A0A0C;color:#888;font-size:11px;border-top:1px solid #2A2A2E;}")
+        self.setStatusBar(self._sb)
+        self._sb.showMessage("Listo — Elden Ring Armor Studio")
 
     # ─────────────────────────────────────────────────────────────────────────
     # Post-init
     # ─────────────────────────────────────────────────────────────────────────
 
     def _post_init(self):
-        self._file_tree.refresh()
+        self._tree.refresh()
         if self._db.count() == 0:
-            self._status.showMessage(
-                "DB vacía — ve a Base de datos › Cargar datos de prueba para poblarla."
+            self._sb.showMessage(
+                "DB vacía — ve a Base de datos › Cargar catálogo de prueba"
             )
+        else:
+            self._sb.showMessage(f"DB: {self._db.count()} registros cargados")
 
     # ─────────────────────────────────────────────────────────────────────────
-    # File selection → load model
+    # Carga de modelo: .partsbnd.dcx → WitchyBND → FLVER → GL
     # ─────────────────────────────────────────────────────────────────────────
 
     @qasync.asyncSlot(str)
     async def _on_file_selected(self, file_path_str: str):
-        """Pipeline: .partsbnd.dcx → WitchyBND → FLVER → OpenGL"""
-        source = Path(file_path_str)
-        if not source.exists():
-            self._status.showMessage(f"Archivo no encontrado: {source}")
+        src = Path(file_path_str)
+        if not src.exists():
+            self._sb.showMessage(f"❌ No existe: {src}")
             return
 
-        self._status.showMessage(f"Cargando: {source.name} ...")
+        self._sb.showMessage(f"⏳ Cargando: {src.name} …")
         self._central.gl_viewer.setEnabled(False)
-
-        # Notificar al panel central
         self._central.notify_file_selected(file_path_str)
-        self._tools.set_current_file(source)
+        self._tools.set_current_file(src)
 
         # Limpiar temporal
         if TEMP_DIR.exists():
             shutil.rmtree(TEMP_DIR, ignore_errors=True)
         TEMP_DIR.mkdir(parents=True, exist_ok=True)
 
-        temp_dcx = TEMP_DIR / source.name
-        shutil.copy2(source, temp_dcx)
+        tmp = TEMP_DIR / src.name
+        shutil.copy2(src, tmp)
 
-        # Desempaquetar
-        ok = await self._witchy.process_file(temp_dcx)
+        # Desempaquetar con WitchyBND
+        ok = await self._witchy.process_file(tmp)
         if not ok:
-            self._status.showMessage(f"❌ WitchyBND falló para {source.name}")
+            self._sb.showMessage(f"❌ WitchyBND falló para {src.name}")
             self._central.gl_viewer.setEnabled(True)
             return
 
-        # Buscar FLVER
+        # Buscar FLVER extraído
         flver_files = list(TEMP_DIR.rglob("*.flver"))
         if not flver_files:
-            contents = [f.name for f in TEMP_DIR.rglob("*")]
+            contents = [f.name for f in TEMP_DIR.rglob("*") if f.is_file()]
             logger.warning(f"No hay .flver en temp. Contenido: {contents}")
-            self._status.showMessage("❌ No se encontró FLVER en el BND desempaquetado.")
+            self._sb.showMessage(f"❌ No se encontró FLVER en {src.name}")
             self._central.gl_viewer.setEnabled(True)
             return
 
         flver_path = flver_files[0]
-        logger.info(f"FLVER encontrado: {flver_path.name}. Iniciando parseo binario...")
+        logger.info(f"FLVER encontrado: {flver_path.name}")
 
-        # Parsear en thread para no bloquear UI
-        from src.utils.async_runner import run_in_background
+        # Parsear en hilo de fondo (no bloquea la UI)
         verts, indices = await run_in_background(
             FLVERParser.extract_geometry_for_gl, flver_path
         )
@@ -196,141 +189,135 @@ class MainWindow(QMainWindow):
 
         if verts is not None and indices is not None:
             self._central.gl_viewer.load_mesh(verts, indices)
-            n_verts = len(verts) // 3
-            self._central.update_vertex_count(n_verts)
-            self._status.showMessage(
-                f"✅ {source.name}  |  {n_verts:,} vértices  |  {len(indices)//3:,} triángulos"
+            n_v = len(verts) // 3
+            n_t = len(indices) // 3
+            self._central.update_stats(n_v, n_t)
+            self._sb.showMessage(
+                f"✅ {src.name}  |  {n_v:,} vértices  |  {n_t:,} triángulos"
             )
         else:
-            self._status.showMessage(f"❌ Error parseando FLVER de {source.name}")
+            self._sb.showMessage(f"❌ No se pudo parsear FLVER de {src.name}")
 
     # ─────────────────────────────────────────────────────────────────────────
-    # Explorer double-click → try to find file in mod/parts or library
+    # Explorador DB → intentar cargar el .dcx si existe en disco
     # ─────────────────────────────────────────────────────────────────────────
 
-    def _on_explorer_model_selected(self, file_name: str):
-        """Cuando se hace doble clic en el explorador de DB, busca el .dcx real."""
-        # Buscar en mod/parts
-        root_me2 = AppConfig.get("modengine2.root_path", "")
-        lib_path = AppConfig.get("project.parts_library_path", "")
-
+    def _on_explorer_selected(self, file_name: str):
         candidates = []
-        for base in (root_me2, lib_path):
+        for base_key in ("modengine2.root_path", "project.parts_library_path"):
+            base = AppConfig.get(base_key, "")
             if base:
                 candidates += list(Path(base).rglob(file_name))
-
         if candidates:
             self._on_file_selected(str(candidates[0]))
         else:
-            self._status.showMessage(
-                f"Archivo {file_name} no encontrado en disco. Copia el .dcx a tu carpeta de proyecto."
+            self._sb.showMessage(
+                f"Archivo {file_name} no encontrado en disco. "
+                "Copia el .dcx a tu carpeta de proyecto y configura la ruta."
             )
 
     # ─────────────────────────────────────────────────────────────────────────
-    # Duplication pipeline
+    # Duplicación (sin WitchyBND — solo copia + rename)
     # ─────────────────────────────────────────────────────────────────────────
 
-    @qasync.asyncSlot(list)
-    async def _on_duplicate_requested(self, slots: list[dict]):
-        source = self._central.source_file
-        if not source:
-            QMessageBox.warning(self, "Sin fuente", "Selecciona un archivo .dcx primero.")
+    @qasync.asyncSlot(list, Path)
+    async def _on_duplicate(self, slots: list[dict], dest: Path):
+        src = self._central.source_file
+        if not src:
+            QMessageBox.warning(self, "Sin modelo", "Selecciona un archivo .dcx primero.")
             return
 
-        dest_dir = self._central.slot_selector.get_dest_dir()
-        pack_name = self._central.slot_selector.get_pack_name()
-
-        if not dest_dir or not str(dest_dir).strip():
-            QMessageBox.warning(self, "Sin destino", "Indica la carpeta de destino.")
-            return
-
-        # Si hay nombre de pack, creamos subcarpeta
-        if pack_name:
-            dest_dir = dest_dir / pack_name
-        dest_dir.mkdir(parents=True, exist_ok=True)
-
+        # Extraer IDs numéricos de los slots seleccionados
         target_ids = []
-        for slot in slots:
-            mid = slot.get("equip_model_id", "")
-            # Extraer el número del ID: "HD_M_1360" → "1360"
-            parts = mid.replace("_L", "").split("_")
-            nums = [p for p in parts if p.isdigit()]
-            if nums:
-                target_ids.append(nums[0])
+        for sl in slots:
+            mid = sl.get("equip_model_id", "")
+            # "HD_M_1360" → "1360" | "HD_M_1360_L" → "1360"
+            parts = [p for p in mid.replace("_L","").split("_") if p.isdigit()]
+            if parts:
+                target_ids.append(parts[0])
 
         if not target_ids:
-            QMessageBox.warning(self, "IDs inválidos", "No se pudieron extraer IDs numéricos de los slots.")
+            QMessageBox.warning(self, "IDs inválidos", "No se detectaron IDs numéricos.")
             return
 
-        total = len(target_ids)
-        dlg = QProgressDialog(f"Duplicando {total} archivos...", "Cancelar", 0, total, self)
+        target_ids = list(dict.fromkeys(target_ids))   # deduplicar
+
+        dlg = QProgressDialog(
+            f"Duplicando {len(target_ids)} archivo(s)…", "Cancelar",
+            0, len(target_ids), self
+        )
         dlg.setWindowTitle("Duplicando modelos")
         dlg.setWindowModality(Qt.WindowModal)
         dlg.show()
 
-        created = []
-        for i, tid in enumerate(target_ids):
-            if dlg.wasCanceled():
-                break
-            dlg.setValue(i)
-            dlg.setLabelText(f"Procesando ID {tid}... ({i+1}/{total})")
+        def cb(n, total):
+            dlg.setValue(n)
             QApplication.processEvents()
 
-            result = await self._duplicator.duplicate_to_ids(
-                source, [tid], dest_dir
-            )
-            created.extend(result)
+        # Ejecutar en hilo de fondo
+        created = await run_in_background(
+            IDDuplicator.duplicate_to_ids, src, target_ids, dest, cb
+        )
 
-        dlg.setValue(total)
         dlg.close()
+        self._tree.refresh_mod_tab()
 
-        # Refrescar el árbol de mod/parts
-        self._file_tree.refresh_mod_tab()
-
-        msg = f"✅ {len(created)} archivos creados en:\n{dest_dir}"
-        if len(created) < total:
-            msg += f"\n⚠ {total - len(created)} fallaron. Revisa los logs."
+        total = len(target_ids)
+        ok_n  = len(created)
+        msg   = f"✅ {ok_n}/{total} archivos creados en:\n{dest}"
+        if ok_n < total:
+            msg += f"\n⚠ {total - ok_n} fallaron. Revisa los logs."
         QMessageBox.information(self, "Duplicación completada", msg)
-        self._status.showMessage(f"Duplicación: {len(created)}/{total} archivos creados en {dest_dir}")
+        self._sb.showMessage(f"Duplicación: {ok_n}/{total} → {dest}")
 
     # ─────────────────────────────────────────────────────────────────────────
-    # Menu actions
+    # Menú actions
     # ─────────────────────────────────────────────────────────────────────────
 
     def _open_settings(self):
         dlg = SettingsDialog(self)
         if dlg.exec():
-            self._file_tree.refresh()
-            self._status.showMessage("Configuración guardada.")
+            self._tree.refresh()
+            self._sb.showMessage("Configuración guardada.")
 
     def _populate_db(self):
         from src.services.scraper_service import ScraperService
         ScraperService(self._db).populate_mock_data()
         self._explorer.perform_database_search("")
-        self._status.showMessage(f"DB poblada: {self._db.count()} registros.")
+        self._sb.showMessage(f"DB: {self._db.count()} registros.")
 
     def _reload_db(self):
         import sqlite3
-        with sqlite3.connect(self._db.db_path) as conn:
-            conn.execute("DELETE FROM armor_parts")
-            conn.commit()
+        with sqlite3.connect(self._db.db_path) as c:
+            c.execute("DELETE FROM armor_parts")
         self._populate_db()
 
-    def _refresh_trees(self):
-        self._file_tree.refresh()
-
-    def _toggle_wireframe(self):
+    def _view_preset(self, yaw: float, pitch: float):
         v = self._central.gl_viewer
-        v.set_wireframe(not v.wireframe)
+        v._yaw = yaw
+        v._pitch = pitch
+        v.update()
 
-    def _reset_camera(self):
-        self._central._reset_cam()
+    def _show_controls(self):
+        QMessageBox.information(self, "Controles de navegación",
+            "🖱  <b>Clic izquierdo + arrastrar</b> — Orbitar el modelo<br>"
+            "🖱  <b>Clic medio + arrastrar</b> — Pan (mover cámara lateralmente)<br>"
+            "🖱  <b>Espacio + clic izquierdo</b> — Pan alternativo<br>"
+            "🖱  <b>Rueda del ratón</b> — Zoom<br>"
+            "🖱  <b>Doble clic</b> — Reset de cámara<br><br>"
+            "⌨  <b>W</b> — Alternar wireframe<br>"
+            "⌨  <b>F</b> — Alternar flat/smooth shading<br>"
+            "⌨  <b>R</b> — Reset cámara<br>"
+            "⌨  <b>1</b> — Vista frontal<br>"
+            "⌨  <b>3</b> — Vista lateral<br>"
+            "⌨  <b>7</b> — Vista superior<br>"
+            "⌨  <b>5</b> — Vista trasera"
+        )
 
     def _about(self):
-        QMessageBox.about(
-            self, "Elden Ring Armor Studio",
+        QMessageBox.about(self, "Elden Ring Armor Studio",
             "<b>Elden Ring Armor Studio</b><br>"
-            "Herramienta visual de gestión de armaduras para Elden Ring.<br><br>"
-            "Stack: Python 3.12 · PySide6 · OpenGL · SQLite · WitchyBND<br>"
+            "Gestión visual de armaduras para Elden Ring.<br><br>"
+            "Stack: Python 3.12 · PySide6 · OpenGL 3.3 · SQLite · WitchyBND<br>"
             "<small>Uso personal. No afiliado con FromSoftware.</small>"
         )

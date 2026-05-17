@@ -1,362 +1,375 @@
 # src/ui/panels/central_panel.py
 """
-Panel central dividido en:
-  Izquierda: Visor 3D del modelo seleccionado
-  Derecha:   Info del modelo del juego + selector de slots para duplicar
+Panel central:
+  Izquierda: visor 3D del modelo seleccionado en el árbol
+  Derecha:   info del juego (DB) + selector de slots para duplicar
 """
 from pathlib import Path
+
 from PySide6.QtWidgets import (
     QWidget, QHBoxLayout, QVBoxLayout, QSplitter,
     QGroupBox, QLabel, QComboBox, QPushButton, QListWidget,
     QListWidgetItem, QLineEdit, QScrollArea, QFrame,
-    QProgressBar, QCheckBox, QMessageBox, QFileDialog,
-    QSizePolicy,
+    QProgressBar, QMessageBox, QFileDialog, QSizePolicy,
+    QCheckBox, QToolBar,
 )
-from PySide6.QtCore import Qt, Signal, QSize
-from PySide6.QtGui import QFont
-import qasync
-from loguru import logger
+from PySide6.QtCore import Qt, Signal, QSize, QTimer
+from PySide6.QtGui import QFont, QIcon
 
 from src.ui.viewer3d.gl_widget import GLViewerWidget
 from src.core.armor_database import ArmorDatabase
 from src.core.config import AppConfig
 
+CATEGORIES   = ["Head", "Body", "Arms", "Legs"]
+CAT_LABELS   = {"Head": "🪖 Cabeza", "Body": "🥋 Cuerpo", "Arms": "🧤 Brazos", "Legs": "👢 Piernas"}
+CAT_PREFIXES = {"Head": "hd", "Body": "bd", "Arms": "am", "Legs": "lg"}
 
-CATEGORIES = ["Head", "Body", "Arms", "Legs"]
-CAT_LABELS = {"Head": "🪖 Cabeza", "Body": "🥋 Cuerpo", "Arms": "🧤 Brazos", "Legs": "👢 Piernas"}
-CAT_PREFIXES = {"Head": "HD", "Body": "BD", "Arms": "AM", "Legs": "LG"}
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Info card del modelo
+# ─────────────────────────────────────────────────────────────────────────────
 
 class ModelInfoCard(QFrame):
-    """Tarjeta compacta que muestra info de un modelo del juego."""
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setFrameShape(QFrame.StyledPanel)
-        self.setFixedHeight(90)
+        self.setStyleSheet("QFrame { background:#1A1A1E; border-radius:6px; }")
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(8, 6, 8, 6)
-        lay.setSpacing(2)
+        lay.setContentsMargins(10, 8, 10, 8)
+        lay.setSpacing(3)
 
-        self._lbl_name = QLabel("—")
-        font = self._lbl_name.font()
-        font.setBold(True)
-        self._lbl_name.setFont(font)
+        self._name = QLabel("—")
+        f = self._name.font()
+        f.setBold(True)
+        f.setPointSize(12)
+        self._name.setFont(f)
+        self._name.setStyleSheet("color:#C9A96E;")
 
-        self._lbl_id   = QLabel()
-        self._lbl_set  = QLabel()
-        self._lbl_cat  = QLabel()
+        self._id   = QLabel()
+        self._set  = QLabel()
+        self._cat  = QLabel()
+        self._file = QLabel()
 
-        for lbl in (self._lbl_id, self._lbl_set, self._lbl_cat):
-            lbl.setStyleSheet("color: #999; font-size: 11px;")
+        for w in (self._id, self._set, self._cat, self._file):
+            w.setStyleSheet("color:#888; font-size:11px;")
+            w.setWordWrap(True)
 
-        lay.addWidget(self._lbl_name)
-        lay.addWidget(self._lbl_id)
-        lay.addWidget(self._lbl_set)
+        lay.addWidget(self._name)
+        lay.addWidget(self._id)
+        lay.addWidget(self._set)
+        lay.addWidget(self._cat)
+        lay.addWidget(self._file)
 
-    def set_data(self, record: dict | None):
-        if not record:
-            self._lbl_name.setText("—")
-            self._lbl_id.setText("")
-            self._lbl_set.setText("")
+    def set_data(self, r: dict | None):
+        if not r:
+            self._name.setText("Sin datos en DB")
+            self._id.setText("")
+            self._set.setText("")
+            self._cat.setText("")
+            self._file.setText("")
             return
-        self._lbl_name.setText(record.get("name_es") or record.get("name_en") or "?")
-        self._lbl_id.setText(f"ID: {record.get('equip_model_id','?')}")
-        self._lbl_set.setText(f"Set: {record.get('set_name','?')}  |  Cat: {record.get('category','?')}")
+        self._name.setText(r.get("name_es") or r.get("name_en") or "?")
+        self._id.setText(f"EquipModelID: {r.get('equip_model_id','?')}")
+        self._set.setText(f"Set: {r.get('set_name','?')}")
+        cat = r.get("category","?")
+        alt = " (Alterado)" if r.get("is_altered") else ""
+        self._cat.setText(f"Categoría: {cat}{alt}")
+        self._file.setText(f"Archivo: {r.get('file_name','?')}")
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Selector de slots para duplicación
+# ─────────────────────────────────────────────────────────────────────────────
 
 class SlotSelectorWidget(QWidget):
-    """
-    Permite al usuario seleccionar múltiples IDs de armaduras del juego
-    por categoría, para luego duplicar el modelo origen a esos slots.
-    """
-    duplicate_requested = Signal(list)    # [(category, target_id, file_name), ...]
+    duplicate_requested = Signal(list, Path)   # (slots: list[dict], dest: Path)
 
     def __init__(self, db: ArmorDatabase, parent=None):
         super().__init__(parent)
-        self._db = db
-        self._source_file: Path | None = None
-        self._build_ui()
+        self._db   = db
+        self._src  = None
+        self._build()
 
-    def _build_ui(self):
+    def _build(self):
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(6)
 
-        hdr = QLabel("🔁 Asignar modelo a slots del juego")
-        hdr.setStyleSheet("font-weight: bold; color: #C9A96E; font-size: 13px;")
+        hdr = QLabel("🔁 Asignar a slots del juego")
+        hdr.setStyleSheet("font-weight:bold; color:#C9A96E; font-size:12px;")
         root.addWidget(hdr)
 
-        # Nombre del pack / carpeta destino
-        pack_row = QHBoxLayout()
-        pack_row.addWidget(QLabel("Nombre del pack:"))
+        # Pack name
+        row_pack = QHBoxLayout()
+        row_pack.addWidget(QLabel("Pack / subcarpeta:"))
         self._inp_pack = QLineEdit()
-        self._inp_pack.setPlaceholderText("ej. 2B_Black")
-        pack_row.addWidget(self._inp_pack)
-        root.addLayout(pack_row)
+        self._inp_pack.setPlaceholderText("ej. 2B_Black  (opcional)")
+        row_pack.addWidget(self._inp_pack)
+        root.addLayout(row_pack)
 
-        # Selector de categoría activa
-        cat_row = QHBoxLayout()
-        cat_row.addWidget(QLabel("Categoría:"))
-        self._combo_cat = QComboBox()
+        # Categoría
+        row_cat = QHBoxLayout()
+        row_cat.addWidget(QLabel("Categoría:"))
+        self._combo = QComboBox()
         for c in CATEGORIES:
-            self._combo_cat.addItem(CAT_LABELS[c], c)
-        self._combo_cat.currentIndexChanged.connect(self._reload_slots)
-        cat_row.addWidget(self._combo_cat)
-        cat_row.addStretch()
-        root.addLayout(cat_row)
+            self._combo.addItem(CAT_LABELS[c], c)
+        self._combo.currentIndexChanged.connect(self._reload)
+        row_cat.addWidget(self._combo)
+        root.addLayout(row_cat)
+
+        # Solo alterados
+        self._chk_alt = QCheckBox("Incluir versiones alteradas")
+        self._chk_alt.stateChanged.connect(self._reload)
+        root.addWidget(self._chk_alt)
 
         # Búsqueda
         self._search = QLineEdit()
-        self._search.setPlaceholderText("🔍 Buscar ID o nombre...")
-        self._search.textChanged.connect(self._reload_slots)
+        self._search.setPlaceholderText("🔍 Buscar ID o nombre…")
+        self._search.textChanged.connect(lambda: QTimer.singleShot(200, self._reload))
         root.addWidget(self._search)
 
-        # Lista de slots disponibles
+        # Lista de slots
         self._list = QListWidget()
         self._list.setSelectionMode(QListWidget.MultiSelection)
-        self._list.setMinimumHeight(150)
+        self._list.setMinimumHeight(120)
         root.addWidget(self._list)
 
-        # Seleccionados rápido
-        sel_row = QHBoxLayout()
-        btn_all = QPushButton("Seleccionar todo el set")
-        btn_all.clicked.connect(self._select_set)
-        btn_none = QPushButton("Limpiar selección")
+        # Botones rápidos
+        row_sel = QHBoxLayout()
+        btn_all  = QPushButton("Seleccionar todo el set")
+        btn_none = QPushButton("Limpiar")
+        btn_all.clicked.connect(self._sel_set)
         btn_none.clicked.connect(self._list.clearSelection)
-        sel_row.addWidget(btn_all)
-        sel_row.addWidget(btn_none)
-        root.addLayout(sel_row)
+        row_sel.addWidget(btn_all)
+        row_sel.addWidget(btn_none)
+        root.addLayout(row_sel)
 
-        # Carpeta destino
-        dest_row = QHBoxLayout()
-        dest_row.addWidget(QLabel("Carpeta destino:"))
+        # Destino
+        row_dst = QHBoxLayout()
+        row_dst.addWidget(QLabel("Destino:"))
         self._inp_dest = QLineEdit()
-        self._inp_dest.setPlaceholderText("Ruta de mod/parts ...")
-        btn_dest = QPushButton("…")
-        btn_dest.setFixedWidth(30)
-        btn_dest.clicked.connect(self._browse_dest)
-        dest_row.addWidget(self._inp_dest)
-        dest_row.addWidget(btn_dest)
-        root.addLayout(dest_row)
+        self._inp_dest.setPlaceholderText("mod/parts …")
+        btn_d = QPushButton("…")
+        btn_d.setFixedWidth(30)
+        btn_d.clicked.connect(self._browse_dest)
+        row_dst.addWidget(self._inp_dest)
+        row_dst.addWidget(btn_d)
+        root.addLayout(row_dst)
 
-        # Progreso + botón
-        self._progress = QProgressBar()
-        self._progress.setVisible(False)
-        root.addWidget(self._progress)
+        # Barra de progreso (oculta)
+        self._prog = QProgressBar()
+        self._prog.setVisible(False)
+        root.addWidget(self._prog)
 
-        self._btn_dup = QPushButton("▶ Duplicar modelo a slots seleccionados")
-        self._btn_dup.setStyleSheet(
-            "background: #5A8A3C; font-weight: bold; padding: 8px; font-size: 13px;"
+        # Botón de acción
+        self._btn = QPushButton("▶  Duplicar a slots seleccionados")
+        self._btn.setStyleSheet(
+            "QPushButton { background:#3A6A28; font-weight:bold; "
+            "padding:8px; font-size:12px; border-radius:4px; }"
+            "QPushButton:hover { background:#4A8A34; }"
+            "QPushButton:pressed { background:#2A5A1C; }"
         )
-        self._btn_dup.clicked.connect(self._on_duplicate)
-        root.addWidget(self._btn_dup)
+        self._btn.clicked.connect(self._on_dup)
+        root.addWidget(self._btn)
 
-    # ── public ────────────────────────────────────────────────────────────────
+    # ── public ───────────────────────────────────────────────────────────────
 
-    def set_source_file(self, path: Path):
-        self._source_file = path
-        # Autodetectar categoría por prefijo del archivo
-        prefix = path.name.split("_")[0].upper()   # "HD", "BD", etc.
-        for i in range(self._combo_cat.count()):
-            if self._combo_cat.itemData(i) and \
-               CAT_PREFIXES.get(self._combo_cat.itemData(i)) == prefix:
-                self._combo_cat.setCurrentIndex(i)
+    def set_source(self, path: Path):
+        self._src = path
+        # Auto-detectar categoría por prefijo
+        pfx = path.name.split("_")[0].lower()
+        for i in range(self._combo.count()):
+            if CAT_PREFIXES.get(self._combo.itemData(i), "") == pfx:
+                self._combo.setCurrentIndex(i)
                 break
-        self._reload_slots()
-        # Autocompletar carpeta destino desde ModEngine2
-        parts = self._default_parts_dir()
-        if parts:
+        # Auto-rellenar destino
+        me2 = AppConfig.get("modengine2.root_path", "")
+        if me2:
+            parts = Path(me2) / "mod" / "parts"
+            parts.mkdir(parents=True, exist_ok=True)
             self._inp_dest.setText(str(parts))
+        self._reload()
 
-    # ── private ───────────────────────────────────────────────────────────────
+    def set_progress(self, v: int, m: int):
+        self._prog.setVisible(True)
+        self._prog.setMaximum(m)
+        self._prog.setValue(v)
+        if v >= m:
+            QTimer.singleShot(1500, lambda: self._prog.setVisible(False))
 
-    def _default_parts_dir(self) -> Path | None:
-        root = AppConfig.get("modengine2.root_path", "")
-        if root:
-            p = Path(root) / "mod" / "parts"
-            p.mkdir(parents=True, exist_ok=True)
-            return p
-        return None
+    def get_selected_slots(self) -> list[dict]:
+        return [it.data(Qt.UserRole) for it in self._list.selectedItems()]
 
-    def _browse_dest(self):
-        d = QFileDialog.getExistingDirectory(self, "Seleccionar carpeta destino", self._inp_dest.text())
-        if d:
-            self._inp_dest.setText(d)
+    def get_dest(self) -> Path:
+        base = Path(self._inp_dest.text().strip() or ".")
+        pack = self._inp_pack.text().strip()
+        return base / pack if pack else base
 
-    def _reload_slots(self):
+    # ── private ──────────────────────────────────────────────────────────────
+
+    def _reload(self):
         self._list.clear()
-        cat = self._combo_cat.currentData()
+        cat   = self._combo.currentData()
         query = self._search.text().strip()
-        results = self._db.search_armor(query, category=cat)
-        for r in results:
-            mid = r.get("equip_model_id", "")
+        rows  = self._db.search_armor(query, category=cat)
+        if not self._chk_alt.isChecked():
+            rows = [r for r in rows if not r.get("is_altered")]
+        for r in rows:
+            mid  = r.get("equip_model_id", "")
             name = r.get("name_es") or r.get("name_en") or ""
-            set_n = r.get("set_name", "")
-            item = QListWidgetItem(f"{mid}  —  {name}  [{set_n}]")
+            sn   = r.get("set_name", "")
+            item = QListWidgetItem(f"{mid}  —  {name}  [{sn}]")
             item.setData(Qt.UserRole, r)
             self._list.addItem(item)
 
-    def _select_set(self):
-        """Selecciona todos los items del set del primer item seleccionado (o todos)."""
-        selected = self._list.selectedItems()
-        if selected:
-            ref_set = selected[0].data(Qt.UserRole).get("set_name", "")
-        else:
-            ref_set = None
+    def _sel_set(self):
+        sel = self._list.selectedItems()
+        ref_set = sel[0].data(Qt.UserRole).get("set_name") if sel else None
         for i in range(self._list.count()):
-            item = self._list.item(i)
-            if ref_set is None or item.data(Qt.UserRole).get("set_name") == ref_set:
-                item.setSelected(True)
+            it = self._list.item(i)
+            if not ref_set or it.data(Qt.UserRole).get("set_name") == ref_set:
+                it.setSelected(True)
 
-    def _on_duplicate(self):
-        selected = self._list.selectedItems()
-        if not selected:
-            QMessageBox.warning(self, "Sin selección", "Selecciona al menos un slot destino.")
+    def _browse_dest(self):
+        d = QFileDialog.getExistingDirectory(self, "Carpeta destino", self._inp_dest.text())
+        if d:
+            self._inp_dest.setText(d)
+
+    def _on_dup(self):
+        slots = self.get_selected_slots()
+        if not slots:
+            QMessageBox.warning(self, "Sin selección", "Selecciona al menos un slot.")
             return
-        if not self._source_file:
-            QMessageBox.warning(self, "Sin modelo", "Selecciona primero un archivo .dcx en el panel izquierdo.")
+        if not self._src:
+            QMessageBox.warning(self, "Sin modelo", "Abre un archivo .dcx primero.")
             return
-        dest = self._inp_dest.text().strip()
-        if not dest:
-            QMessageBox.warning(self, "Sin destino", "Indica la carpeta de destino.")
-            return
+        dest = self.get_dest()
+        self.duplicate_requested.emit(slots, dest)
 
-        slots = [item.data(Qt.UserRole) for item in selected]
-        self.duplicate_requested.emit(slots)
 
-    def get_selected_slots(self) -> list[dict]:
-        return [item.data(Qt.UserRole) for item in self._list.selectedItems()]
-
-    def get_pack_name(self) -> str:
-        return self._inp_pack.text().strip()
-
-    def get_dest_dir(self) -> Path:
-        return Path(self._inp_dest.text().strip())
-
-    def set_progress(self, value: int, maximum: int):
-        self._progress.setVisible(True)
-        self._progress.setMaximum(maximum)
-        self._progress.setValue(value)
-        if value >= maximum:
-            self._progress.setVisible(False)
-
+# ─────────────────────────────────────────────────────────────────────────────
+# Panel central
+# ─────────────────────────────────────────────────────────────────────────────
 
 class CentralPanel(QWidget):
-    """
-    Panel central:
-      - Izquierda: GLViewerWidget (modelo 3D)
-      - Derecha: info del juego + slot selector para duplicar
-    """
     def __init__(self, db: ArmorDatabase, parent=None):
         super().__init__(parent)
-        self._db = db
-        self._current_file: Path | None = None
-        self._build_ui()
+        self._db  = db
+        self._cur = None
+        self._build()
 
-    def _build_ui(self):
+    def _build(self):
         root = QHBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
 
-        splitter = QSplitter(Qt.Horizontal)
+        spl = QSplitter(Qt.Horizontal)
 
-        # ── Lado izquierdo: visor 3D + controles ──────────────────────────────
+        # ── Lado izquierdo: visor 3D ──────────────────────────────────────────
         left = QWidget()
-        left_lay = QVBoxLayout(left)
-        left_lay.setContentsMargins(0, 0, 0, 0)
+        ll   = QVBoxLayout(left)
+        ll.setContentsMargins(0, 0, 0, 0)
+        ll.setSpacing(2)
 
         self.gl_viewer = GLViewerWidget()
-        left_lay.addWidget(self.gl_viewer, stretch=1)
+        ll.addWidget(self.gl_viewer, stretch=1)
 
-        # Barra de controles del viewer
-        ctrl_row = QHBoxLayout()
-        self._btn_wire = QPushButton("Wireframe [W]")
+        # Barra de herramientas del visor
+        tb = QHBoxLayout()
+        tb.setSpacing(4)
+
+        self._btn_wire = QPushButton("⬜ Wireframe")
         self._btn_wire.setCheckable(True)
+        self._btn_wire.setFixedHeight(26)
         self._btn_wire.toggled.connect(self.gl_viewer.set_wireframe)
 
-        self._btn_reset = QPushButton("Reset cámara [R]")
-        self._btn_reset.clicked.connect(self._reset_cam)
+        self._btn_flat = QPushButton("🔲 Flat")
+        self._btn_flat.setCheckable(True)
+        self._btn_flat.setChecked(True)
+        self._btn_flat.setFixedHeight(26)
+        self._btn_flat.toggled.connect(lambda v: setattr(self.gl_viewer, 'flat_shade', v) or self.gl_viewer.update())
 
-        self._lbl_verts = QLabel("Sin modelo")
-        self._lbl_verts.setStyleSheet("color: #888; font-size: 11px;")
+        self._btn_grid = QPushButton("⊞ Grid")
+        self._btn_grid.setCheckable(True)
+        self._btn_grid.setChecked(True)
+        self._btn_grid.setFixedHeight(26)
+        self._btn_grid.toggled.connect(lambda v: setattr(self.gl_viewer, 'show_grid', v) or self.gl_viewer.update())
 
-        ctrl_row.addWidget(self._btn_wire)
-        ctrl_row.addWidget(self._btn_reset)
-        ctrl_row.addStretch()
-        ctrl_row.addWidget(self._lbl_verts)
-        left_lay.addLayout(ctrl_row)
+        self._btn_reset = QPushButton("↺ Reset [R]")
+        self._btn_reset.setFixedHeight(26)
+        self._btn_reset.clicked.connect(self.gl_viewer.reset_camera)
 
-        splitter.addWidget(left)
+        self._lbl_stats = QLabel("Sin modelo")
+        self._lbl_stats.setStyleSheet("color:#666; font-size:10px;")
+
+        for w in (self._btn_wire, self._btn_flat, self._btn_grid, self._btn_reset):
+            tb.addWidget(w)
+        tb.addStretch()
+        tb.addWidget(self._lbl_stats)
+        ll.addLayout(tb)
+
+        spl.addWidget(left)
 
         # ── Lado derecho: info + slots ─────────────────────────────────────────
-        right = QScrollArea()
-        right.setWidgetResizable(True)
-        right.setMinimumWidth(320)
-        right.setMaximumWidth(420)
+        right_scroll = QScrollArea()
+        right_scroll.setWidgetResizable(True)
+        right_scroll.setMinimumWidth(300)
+        right_scroll.setMaximumWidth(400)
 
         right_inner = QWidget()
-        right_lay = QVBoxLayout(right_inner)
-        right_lay.setContentsMargins(8, 8, 8, 8)
-        right_lay.setSpacing(8)
+        rl = QVBoxLayout(right_inner)
+        rl.setContentsMargins(8, 8, 8, 8)
+        rl.setSpacing(8)
 
-        # Info del archivo seleccionado
+        # Archivo seleccionado
         grp_file = QGroupBox("Archivo seleccionado")
-        grp_file_lay = QVBoxLayout(grp_file)
+        gl_file  = QVBoxLayout(grp_file)
         self._lbl_file = QLabel("(ninguno)")
         self._lbl_file.setWordWrap(True)
-        self._lbl_file.setStyleSheet("color: #C9A96E; font-size: 11px;")
-        grp_file_lay.addWidget(self._lbl_file)
-        right_lay.addWidget(grp_file)
+        self._lbl_file.setStyleSheet("color:#C9A96E; font-size:11px;")
+        gl_file.addWidget(self._lbl_file)
+        rl.addWidget(grp_file)
 
-        # Info del modelo del juego (desde la DB)
-        grp_info = QGroupBox("Modelo del juego (DB)")
-        grp_info_lay = QVBoxLayout(grp_info)
+        # Info del juego
+        grp_info = QGroupBox("Datos del juego (EquipParamProtector)")
+        gl_info  = QVBoxLayout(grp_info)
         self._card = ModelInfoCard()
-        grp_info_lay.addWidget(self._card)
-        right_lay.addWidget(grp_info)
+        gl_info.addWidget(self._card)
+        rl.addWidget(grp_info)
 
-        # Slot selector para duplicar
-        grp_slots = QGroupBox("Duplicar a slots del juego")
-        grp_slots_lay = QVBoxLayout(grp_slots)
-        self._slot_sel = SlotSelectorWidget(self._db)
-        grp_slots_lay.addWidget(self._slot_sel)
-        right_lay.addWidget(grp_slots)
-        right_lay.addStretch()
+        # Slot selector
+        grp_slots = QGroupBox("Duplicar modelo a slots")
+        gl_slots  = QVBoxLayout(grp_slots)
+        self._slots = SlotSelectorWidget(self._db)
+        gl_slots.addWidget(self._slots)
+        rl.addWidget(grp_slots)
+        rl.addStretch()
 
-        right.setWidget(right_inner)
-        splitter.addWidget(right)
+        right_scroll.setWidget(right_inner)
+        spl.addWidget(right_scroll)
 
-        splitter.setStretchFactor(0, 3)
-        splitter.setStretchFactor(1, 1)
-        root.addWidget(splitter)
-
-    def _reset_cam(self):
-        import numpy as np
-        self.gl_viewer._yaw   = 0.4
-        self.gl_viewer._pitch = 0.25
-        self.gl_viewer._zoom  = 3.0
-        self.gl_viewer._target = np.array([0.0, 1.0, 0.0], dtype=np.float32)
-        self.gl_viewer.update()
+        spl.setStretchFactor(0, 3)
+        spl.setStretchFactor(1, 1)
+        root.addWidget(spl)
 
     # ── public API ────────────────────────────────────────────────────────────
 
-    def notify_file_selected(self, file_path: str):
-        """Llamado por MainWindow cuando el usuario hace doble clic en el árbol."""
-        p = Path(file_path)
-        self._current_file = p
-        self._lbl_file.setText(p.name)
-        self._slot_sel.set_source_file(p)
-        # Buscar info en la DB por nombre de archivo
-        stem = p.name.split(".")[0].upper()  # "HD_M_1360_L"
-        results = self._db.search_armor(stem)
-        self._card.set_data(results[0] if results else None)
-
-    def update_vertex_count(self, n_verts: int):
-        self._lbl_verts.setText(f"{n_verts:,} vértices")
-
     @property
     def slot_selector(self) -> SlotSelectorWidget:
-        return self._slot_sel
+        return self._slots
 
     @property
     def source_file(self) -> Path | None:
-        return self._current_file
+        return self._cur
+
+    def notify_file_selected(self, path_str: str):
+        p = Path(path_str)
+        self._cur = p
+        self._lbl_file.setText(p.name)
+        self._slots.set_source(p)
+        # Buscar info en DB
+        stem = p.name.split(".")[0].upper()
+        rows = self._db.search_armor(stem)
+        self._card.set_data(rows[0] if rows else None)
+
+    def update_stats(self, n_verts: int, n_tris: int):
+        self._lbl_stats.setText(f"{n_verts:,} verts  |  {n_tris:,} tris")
