@@ -4,23 +4,30 @@ from pathlib import Path
 from loguru import logger
 from src.core.config import AppConfig
 
+
 class FLVEREditorService:
-    def __init__(self):
-        self.editor_exe = Path(AppConfig.get("tools.flver_editor_path", "FLVER_Editor.exe"))
+    @property
+    def exe(self) -> Path | None:
+        raw = AppConfig.get("tools.flver_editor_path", "")
+        if raw:
+            p = Path(raw)
+            if p.exists():
+                return p
+        fallback = Path("tools/FLVER_Editor/FLVER_Editor.exe")
+        return fallback if fallback.exists() else None
 
     def open_model(self, file_path: Path):
-        """Abre un FLVER o BND en FLVER Editor usando subprocess de forma separada (fire and forget)."""
-        if not self.editor_exe.exists():
+        exe = self.exe
+        if not exe:
             logger.error("FLVER Editor no configurado en los ajustes.")
-            return
-
+            return False
         try:
-            # Usamos Popen sin esperar a que termine para no bloquear la aplicación host
-            # creationflags=subprocess.CREATE_NO_WINDOW evita que se abra una consola negra extra
             subprocess.Popen(
-                [str(self.editor_exe), str(file_path)],
-                creationflags=subprocess.CREATE_NO_WINDOW
+                [str(exe), str(file_path)],
+                creationflags=subprocess.CREATE_NO_WINDOW,
             )
             logger.info(f"FLVER Editor lanzado para: {file_path.name}")
+            return True
         except Exception as e:
             logger.error(f"Error al lanzar FLVER Editor: {e}")
+            return False

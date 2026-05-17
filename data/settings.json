@@ -3,8 +3,15 @@
         "root_path": "C:/Users/Anki/Downloads/ModEngine"
     },
     "tools": {
-        "witchybnd_path": "C:/Users/Anki/Documents/.apps/PMU/tools/WitchyBND/WitchyBND.exe",
-        "flver_editor_path": "C:/Users/Anki/Documents/.apps/PMU/tools/FLVER_Editor/FLVER_Editor.exe",
-        "smithbox_path": "C:/Users/Anki/Documents/.apps/PMU/tools/Smithbox/Smithbox.exe"
+        "witchybnd_path": "tools/witchybnd/witchybnd.exe",
+        "flver_editor_path": "tools/flver_editor/flver_editor.exe",
+        "smithbox_path": "tools/smithbox/smithbox.exe"
+    },
+    "project": {
+        "parts_library_path": "C:/Users/Anki/Documents/.apps/PMU/parts"
+    },
+    "ui": {
+        "grid_size": 140,
+        "dark_mode": true
     }
 }
