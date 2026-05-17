@@ -1,0 +1,50 @@
+2026-05-17 03:23:47 | INFO | main:main:16 - Iniciando Elden Ring Armor Studio...
+2026-05-17 03:24:14 | INFO | witchy_service:process_file:22 - WitchyBND procesando: am_m_1360_l.partsbnd.dcx
+2026-05-17 03:24:14 | INFO | witchy_service:process_file:40 - WitchyBND completado: am_m_1360_l.partsbnd.dcx
+2026-05-17 03:24:14 | INFO | main_window:load_model_into_viewer:98 - Buscando geometría .flver en los archivos extraídos...
+2026-05-17 03:24:14 | INFO | main_window:load_model_into_viewer:111 - FLVER encontrado: ElfDGAM.flver. Iniciando parseo binario...
+2026-05-17 03:24:14 | INFO | flver_parser:extract_geometry_for_gl:16 - Leyendo estructura binaria directa desde: ElfDGAM.flver
+2026-05-17 03:24:14 | DEBUG | flver_parser:extract_geometry_for_gl:32 - FLVER Header: Meshes=0, Buffers=10
+2026-05-17 03:24:14 | INFO | flver_parser:extract_geometry_for_gl:88 - Geometría binaria procesada nativamente: 28110 vértices.
+2026-05-17 03:24:18 | INFO | witchy_service:process_file:22 - WitchyBND procesando: bd_m_1361_l.partsbnd.dcx
+2026-05-17 03:24:18 | INFO | witchy_service:process_file:40 - WitchyBND completado: bd_m_1361_l.partsbnd.dcx
+2026-05-17 03:24:18 | INFO | main_window:load_model_into_viewer:98 - Buscando geometría .flver en los archivos extraídos...
+2026-05-17 03:24:18 | INFO | main_window:load_model_into_viewer:111 - FLVER encontrado: ElfDGBD.flver. Iniciando parseo binario...
+2026-05-17 03:24:18 | INFO | flver_parser:extract_geometry_for_gl:16 - Leyendo estructura binaria directa desde: ElfDGBD.flver
+2026-05-17 03:24:18 | DEBUG | flver_parser:extract_geometry_for_gl:32 - FLVER Header: Meshes=0, Buffers=10
+2026-05-17 03:24:18 | INFO | flver_parser:extract_geometry_for_gl:88 - Geometría binaria procesada nativamente: 35965 vértices.
+2026-05-17 03:24:21 | INFO | witchy_service:process_file:22 - WitchyBND procesando: bd_m_1361.partsbnd.dcx
+2026-05-17 03:24:22 | INFO | witchy_service:process_file:40 - WitchyBND completado: bd_m_1361.partsbnd.dcx
+2026-05-17 03:24:22 | INFO | main_window:load_model_into_viewer:98 - Buscando geometría .flver en los archivos extraídos...
+2026-05-17 03:24:22 | INFO | main_window:load_model_into_viewer:111 - FLVER encontrado: ElfDGBD.flver. Iniciando parseo binario...
+2026-05-17 03:24:22 | INFO | flver_parser:extract_geometry_for_gl:16 - Leyendo estructura binaria directa desde: ElfDGBD.flver
+2026-05-17 03:24:22 | DEBUG | flver_parser:extract_geometry_for_gl:32 - FLVER Header: Meshes=0, Buffers=10
+2026-05-17 03:24:22 | INFO | flver_parser:extract_geometry_for_gl:88 - Geometría binaria procesada nativamente: 35965 vértices.
+2026-05-17 03:24:23 | INFO | witchy_service:process_file:22 - WitchyBND procesando: am_m_1360_l.partsbnd.dcx
+2026-05-17 03:24:24 | INFO | witchy_service:process_file:40 - WitchyBND completado: am_m_1360_l.partsbnd.dcx
+2026-05-17 03:24:24 | INFO | main_window:load_model_into_viewer:98 - Buscando geometría .flver en los archivos extraídos...
+2026-05-17 03:24:24 | INFO | main_window:load_model_into_viewer:111 - FLVER encontrado: ElfDGAM.flver. Iniciando parseo binario...
+2026-05-17 03:24:24 | INFO | flver_parser:extract_geometry_for_gl:16 - Leyendo estructura binaria directa desde: ElfDGAM.flver
+2026-05-17 03:24:24 | DEBUG | flver_parser:extract_geometry_for_gl:32 - FLVER Header: Meshes=0, Buffers=10
+2026-05-17 03:24:24 | INFO | flver_parser:extract_geometry_for_gl:88 - Geometría binaria procesada nativamente: 28110 vértices.
+2026-05-17 03:24:25 | INFO | witchy_service:process_file:22 - WitchyBND procesando: lg_m_1360_l.partsbnd.dcx
+2026-05-17 03:24:26 | INFO | witchy_service:process_file:40 - WitchyBND completado: lg_m_1360_l.partsbnd.dcx
+2026-05-17 03:24:26 | INFO | main_window:load_model_into_viewer:98 - Buscando geometría .flver en los archivos extraídos...
+2026-05-17 03:24:26 | INFO | main_window:load_model_into_viewer:111 - FLVER encontrado: ElfDGLG.flver. Iniciando parseo binario...
+2026-05-17 03:24:26 | INFO | flver_parser:extract_geometry_for_gl:16 - Leyendo estructura binaria directa desde: ElfDGLG.flver
+2026-05-17 03:24:26 | DEBUG | flver_parser:extract_geometry_for_gl:32 - FLVER Header: Meshes=0, Buffers=10
+2026-05-17 03:24:26 | INFO | flver_parser:extract_geometry_for_gl:88 - Geometría binaria procesada nativamente: 21477 vértices.
+2026-05-17 03:24:27 | INFO | witchy_service:process_file:22 - WitchyBND procesando: lg_m_1360.partsbnd.dcx
+2026-05-17 03:24:27 | INFO | witchy_service:process_file:40 - WitchyBND completado: lg_m_1360.partsbnd.dcx
+2026-05-17 03:24:27 | INFO | main_window:load_model_into_viewer:98 - Buscando geometría .flver en los archivos extraídos...
+2026-05-17 03:24:27 | INFO | main_window:load_model_into_viewer:111 - FLVER encontrado: ElfDGLG.flver. Iniciando parseo binario...
+2026-05-17 03:24:27 | INFO | flver_parser:extract_geometry_for_gl:16 - Leyendo estructura binaria directa desde: ElfDGLG.flver
+2026-05-17 03:24:27 | DEBUG | flver_parser:extract_geometry_for_gl:32 - FLVER Header: Meshes=0, Buffers=10
+2026-05-17 03:24:27 | INFO | flver_parser:extract_geometry_for_gl:88 - Geometría binaria procesada nativamente: 21477 vértices.
+2026-05-17 03:24:28 | INFO | witchy_service:process_file:22 - WitchyBND procesando: bd_m_1361_l.partsbnd.dcx
+2026-05-17 03:24:28 | INFO | witchy_service:process_file:40 - WitchyBND completado: bd_m_1361_l.partsbnd.dcx
+2026-05-17 03:24:28 | INFO | main_window:load_model_into_viewer:98 - Buscando geometría .flver en los archivos extraídos...
+2026-05-17 03:24:28 | INFO | main_window:load_model_into_viewer:111 - FLVER encontrado: ElfDGBD.flver. Iniciando parseo binario...
+2026-05-17 03:24:28 | INFO | flver_parser:extract_geometry_for_gl:16 - Leyendo estructura binaria directa desde: ElfDGBD.flver
+2026-05-17 03:24:28 | DEBUG | flver_parser:extract_geometry_for_gl:32 - FLVER Header: Meshes=0, Buffers=10
+2026-05-17 03:24:28 | INFO | flver_parser:extract_geometry_for_gl:88 - Geometría binaria procesada nativamente: 35965 vértices.

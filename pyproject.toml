@@ -1,0 +1,17 @@
+# pyproject.toml
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "eldenring-armor-studio"
+version = "0.1.0"
+description = "Estación centralizada de gestión visual de armaduras para Elden Ring"
+requires-python = ">=3.12"
+authors = [
+    {name = "Tu Nombre", email = "dev@example.com"}
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]

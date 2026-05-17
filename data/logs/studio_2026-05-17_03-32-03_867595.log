@@ -1,0 +1,58 @@
+2026-05-17 03:32:03 | INFO | main:main:16 - Iniciando Elden Ring Armor Studio...
+2026-05-17 03:32:03 | DEBUG | parts_explorer_panel:perform_database_search:52 - Ejecutando búsqueda de armaduras con query: ''
+2026-05-17 03:32:05 | INFO | witchy_service:process_file:22 - WitchyBND procesando: bd_m_1361.partsbnd.dcx
+2026-05-17 03:32:06 | INFO | witchy_service:process_file:40 - WitchyBND completado: bd_m_1361.partsbnd.dcx
+2026-05-17 03:32:06 | INFO | main_window:load_model_into_viewer:155 - Buscando geometría .flver en los archivos extraídos...
+2026-05-17 03:32:06 | INFO | main_window:load_model_into_viewer:169 - FLVER encontrado: ElfDGBD.flver. Iniciando parseo...
+2026-05-17 03:32:06 | INFO | flver_parser:extract_geometry_for_gl:15 - Decodificando estructura FLVER2 nativa: ElfDGBD.flver
+2026-05-17 03:32:06 | DEBUG | flver_parser:extract_geometry_for_gl:33 - Mallas detectadas: 1031884704, Buffers: 17256
+2026-05-17 03:32:06 | INFO | flver_parser:extract_geometry_for_gl:75 - ¡Geometría unificada con éxito! 8053 vértices cargados en VRAM.
+2026-05-17 03:32:08 | INFO | witchy_service:process_file:22 - WitchyBND procesando: hd_m_1360_l.partsbnd.dcx
+2026-05-17 03:32:08 | INFO | witchy_service:process_file:40 - WitchyBND completado: hd_m_1360_l.partsbnd.dcx
+2026-05-17 03:32:08 | INFO | main_window:load_model_into_viewer:155 - Buscando geometría .flver en los archivos extraídos...
+2026-05-17 03:32:08 | INFO | main_window:load_model_into_viewer:169 - FLVER encontrado: ElfDGHD.flver. Iniciando parseo...
+2026-05-17 03:32:08 | INFO | flver_parser:extract_geometry_for_gl:15 - Decodificando estructura FLVER2 nativa: ElfDGHD.flver
+2026-05-17 03:32:08 | DEBUG | flver_parser:extract_geometry_for_gl:33 - Mallas detectadas: 1031884704, Buffers: 218736
+2026-05-17 03:32:08 | INFO | flver_parser:extract_geometry_for_gl:75 - ¡Geometría unificada con éxito! 96438 vértices cargados en VRAM.
+2026-05-17 03:32:10 | INFO | witchy_service:process_file:22 - WitchyBND procesando: bd_m_1361_l.partsbnd.dcx
+2026-05-17 03:32:10 | INFO | witchy_service:process_file:40 - WitchyBND completado: bd_m_1361_l.partsbnd.dcx
+2026-05-17 03:32:10 | INFO | main_window:load_model_into_viewer:155 - Buscando geometría .flver en los archivos extraídos...
+2026-05-17 03:32:10 | INFO | main_window:load_model_into_viewer:169 - FLVER encontrado: ElfDGBD.flver. Iniciando parseo...
+2026-05-17 03:32:10 | INFO | flver_parser:extract_geometry_for_gl:15 - Decodificando estructura FLVER2 nativa: ElfDGBD.flver
+2026-05-17 03:32:10 | DEBUG | flver_parser:extract_geometry_for_gl:33 - Mallas detectadas: 1031884704, Buffers: 17256
+2026-05-17 03:32:11 | INFO | flver_parser:extract_geometry_for_gl:75 - ¡Geometría unificada con éxito! 8053 vértices cargados en VRAM.
+2026-05-17 03:32:11 | INFO | witchy_service:process_file:22 - WitchyBND procesando: hd_m_1360.partsbnd.dcx
+2026-05-17 03:32:11 | INFO | witchy_service:process_file:40 - WitchyBND completado: hd_m_1360.partsbnd.dcx
+2026-05-17 03:32:11 | INFO | main_window:load_model_into_viewer:155 - Buscando geometría .flver en los archivos extraídos...
+2026-05-17 03:32:11 | INFO | main_window:load_model_into_viewer:169 - FLVER encontrado: ElfDGHD.flver. Iniciando parseo...
+2026-05-17 03:32:11 | INFO | flver_parser:extract_geometry_for_gl:15 - Decodificando estructura FLVER2 nativa: ElfDGHD.flver
+2026-05-17 03:32:11 | DEBUG | flver_parser:extract_geometry_for_gl:33 - Mallas detectadas: 1031884704, Buffers: 218736
+2026-05-17 03:32:12 | INFO | flver_parser:extract_geometry_for_gl:75 - ¡Geometría unificada con éxito! 96438 vértices cargados en VRAM.
+2026-05-17 03:32:18 | INFO | witchy_service:process_file:22 - WitchyBND procesando: hd_m_1360_l.partsbnd.dcx
+2026-05-17 03:32:19 | INFO | witchy_service:process_file:40 - WitchyBND completado: hd_m_1360_l.partsbnd.dcx
+2026-05-17 03:32:19 | INFO | main_window:load_model_into_viewer:155 - Buscando geometría .flver en los archivos extraídos...
+2026-05-17 03:32:19 | INFO | main_window:load_model_into_viewer:169 - FLVER encontrado: ElfDGHD.flver. Iniciando parseo...
+2026-05-17 03:32:19 | INFO | flver_parser:extract_geometry_for_gl:15 - Decodificando estructura FLVER2 nativa: ElfDGHD.flver
+2026-05-17 03:32:19 | DEBUG | flver_parser:extract_geometry_for_gl:33 - Mallas detectadas: 1031884704, Buffers: 218736
+2026-05-17 03:32:19 | INFO | flver_parser:extract_geometry_for_gl:75 - ¡Geometría unificada con éxito! 96438 vértices cargados en VRAM.
+2026-05-17 03:32:19 | INFO | witchy_service:process_file:22 - WitchyBND procesando: bd_m_1361_l.partsbnd.dcx
+2026-05-17 03:32:20 | INFO | witchy_service:process_file:40 - WitchyBND completado: bd_m_1361_l.partsbnd.dcx
+2026-05-17 03:32:20 | INFO | main_window:load_model_into_viewer:155 - Buscando geometría .flver en los archivos extraídos...
+2026-05-17 03:32:20 | INFO | main_window:load_model_into_viewer:169 - FLVER encontrado: ElfDGBD.flver. Iniciando parseo...
+2026-05-17 03:32:20 | INFO | flver_parser:extract_geometry_for_gl:15 - Decodificando estructura FLVER2 nativa: ElfDGBD.flver
+2026-05-17 03:32:20 | DEBUG | flver_parser:extract_geometry_for_gl:33 - Mallas detectadas: 1031884704, Buffers: 17256
+2026-05-17 03:32:20 | INFO | flver_parser:extract_geometry_for_gl:75 - ¡Geometría unificada con éxito! 8053 vértices cargados en VRAM.
+2026-05-17 03:32:40 | INFO | witchy_service:process_file:22 - WitchyBND procesando: lg_m_1360.partsbnd.dcx
+2026-05-17 03:32:40 | INFO | witchy_service:process_file:40 - WitchyBND completado: lg_m_1360.partsbnd.dcx
+2026-05-17 03:32:40 | INFO | main_window:load_model_into_viewer:155 - Buscando geometría .flver en los archivos extraídos...
+2026-05-17 03:32:40 | INFO | main_window:load_model_into_viewer:169 - FLVER encontrado: ElfDGLG.flver. Iniciando parseo...
+2026-05-17 03:32:40 | INFO | flver_parser:extract_geometry_for_gl:15 - Decodificando estructura FLVER2 nativa: ElfDGLG.flver
+2026-05-17 03:32:40 | DEBUG | flver_parser:extract_geometry_for_gl:33 - Mallas detectadas: 1031884704, Buffers: 10128
+2026-05-17 03:32:40 | INFO | flver_parser:extract_geometry_for_gl:75 - ¡Geometría unificada con éxito! 4842 vértices cargados en VRAM.
+2026-05-17 03:32:44 | INFO | witchy_service:process_file:22 - WitchyBND procesando: am_m_1360.partsbnd.dcx
+2026-05-17 03:32:44 | INFO | witchy_service:process_file:40 - WitchyBND completado: am_m_1360.partsbnd.dcx
+2026-05-17 03:32:44 | INFO | main_window:load_model_into_viewer:155 - Buscando geometría .flver en los archivos extraídos...
+2026-05-17 03:32:44 | INFO | main_window:load_model_into_viewer:169 - FLVER encontrado: ElfDGAM.flver. Iniciando parseo...
+2026-05-17 03:32:44 | INFO | flver_parser:extract_geometry_for_gl:15 - Decodificando estructura FLVER2 nativa: ElfDGAM.flver
+2026-05-17 03:32:44 | DEBUG | flver_parser:extract_geometry_for_gl:33 - Mallas detectadas: 1031884704, Buffers: 13608
+2026-05-17 03:32:44 | INFO | flver_parser:extract_geometry_for_gl:75 - ¡Geometría unificada con éxito! 6318 vértices cargados en VRAM.

@@ -1,0 +1,8 @@
+2026-05-17 03:12:12 | INFO | main:main:16 - Iniciando Elden Ring Armor Studio...
+2026-05-17 03:12:12 | DEBUG | parts_explorer_panel:perform_database_search:52 - Ejecutando búsqueda de armaduras con query: ''
+2026-05-17 03:12:14 | INFO | witchy_service:process_file:22 - WitchyBND procesando: hd_m_1360_l.partsbnd.dcx
+2026-05-17 03:12:14 | INFO | witchy_service:process_file:40 - WitchyBND completado: hd_m_1360_l.partsbnd.dcx
+2026-05-17 03:12:27 | INFO | witchy_service:process_file:22 - WitchyBND procesando: am_m_1360_l.partsbnd.dcx
+2026-05-17 03:12:27 | INFO | witchy_service:process_file:40 - WitchyBND completado: am_m_1360_l.partsbnd.dcx
+2026-05-17 03:13:09 | INFO | witchy_service:process_file:22 - WitchyBND procesando: am_m_1360.partsbnd.dcx
+2026-05-17 03:13:09 | INFO | witchy_service:process_file:40 - WitchyBND completado: am_m_1360.partsbnd.dcx

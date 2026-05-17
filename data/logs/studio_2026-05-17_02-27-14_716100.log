@@ -1,0 +1,7 @@
+2026-05-17 02:27:14 | INFO | main:main:15 - Iniciando Elden Ring Armor Studio...
+2026-05-17 02:27:14 | DEBUG | parts_explorer_panel:perform_database_search:42 - Ejecutando búsqueda de armaduras con query: ''
+2026-05-17 02:27:14 | INFO | parts_explorer_panel:perform_database_search:51 - No se encontraron resultados para la búsqueda.
+2026-05-17 02:27:49 | DEBUG | parts_explorer_panel:perform_database_search:42 - Ejecutando búsqueda de armaduras con query: 'ass'
+2026-05-17 02:27:49 | INFO | parts_explorer_panel:perform_database_search:51 - No se encontraron resultados para la búsqueda.
+2026-05-17 02:27:50 | DEBUG | parts_explorer_panel:perform_database_search:42 - Ejecutando búsqueda de armaduras con query: ''
+2026-05-17 02:27:50 | INFO | parts_explorer_panel:perform_database_search:51 - No se encontraron resultados para la búsqueda.

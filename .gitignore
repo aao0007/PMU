@@ -1,0 +1,23 @@
+# Entorno virtual
+.venv/
+venv/
+env/
+
+# Dependencias (si no quieres versionarlo)
+requirements.txt
+
+# Carpeta tools
+tools/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# VSCode
+.vscode/
+
+# Sistema
+.DS_Store
+Thumbs.db

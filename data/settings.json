@@ -1,0 +1,10 @@
+{
+    "modengine2": {
+        "root_path": "C:/Users/Anki/Downloads/ModEngine"
+    },
+    "tools": {
+        "witchybnd_path": "C:/Users/Anki/Documents/.apps/PMU/tools/WitchyBND/WitchyBND.exe",
+        "flver_editor_path": "C:/Users/Anki/Documents/.apps/PMU/tools/FLVER_Editor/FLVER_Editor.exe",
+        "smithbox_path": "C:/Users/Anki/Documents/.apps/PMU/tools/Smithbox/Smithbox.exe"
+    }
+}

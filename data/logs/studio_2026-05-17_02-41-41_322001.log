@@ -1,0 +1,4 @@
+2026-05-17 02:41:41 | INFO | main:main:16 - Iniciando Elden Ring Armor Studio...
+2026-05-17 02:41:41 | DEBUG | parts_explorer_panel:perform_database_search:42 - Ejecutando búsqueda de armaduras con query: ''
+2026-05-17 02:41:41 | INFO | parts_explorer_panel:perform_database_search:51 - No se encontraron resultados para la búsqueda.
+2026-05-17 02:42:01 | ERROR | flver_editor_service:open_model:14 - FLVER Editor no configurado en los ajustes.
