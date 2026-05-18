@@ -9,6 +9,7 @@ from PySide6.QtGui import QIcon, QPixmap
 from loguru import logger
 from src.core.armor_database import ArmorDatabase
 from src.ui.widgets.search_bar import DebouncedSearchBar
+from src.core.config import AppConfig
 
 CATEGORIES = ["Todos", "Head", "Body", "Arms", "Legs"]
 CAT_EMOJIS = {"Head": "🪖", "Body": "🥋", "Arms": "🧤", "Legs": "👢", "Todos": "🗂"}
@@ -93,8 +94,15 @@ class PartsExplorerPanel(QWidget):
             self._lbl_count.setText("0 resultados")
             return
 
+        # Obtenemos el idioma elegido en ajustes (por defecto "es")
+        lang = AppConfig.get("ui.language", "es")
+
         for r in results:
-            name = r.get("name_es") or r.get("name_en") or "?"
+            # Seleccionamos dinámicamente name_es o name_en
+            name = r.get(f"name_{lang}")
+            if not name: 
+                name = r.get("name_es") or r.get("name_en") or "?"
+
             mid  = r.get("equip_model_id", "")
             cat_r = r.get("category", "")
             file_name = r.get("file_name", "")

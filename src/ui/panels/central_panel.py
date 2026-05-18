@@ -68,9 +68,20 @@ class ModelInfoCard(QFrame):
             self._cat.setText("")
             self._file.setText("")
             return
-        self._name.setText(r.get("name_es") or r.get("name_en") or "?")
-        self._id.setText(f"EquipModelID: {r.get('equip_model_id','?')}")
-        self._set.setText(f"Set: {r.get('set_name','?')}")
+        
+        from src.core.config import AppConfig
+        lang = AppConfig.get("ui.language", "es")
+        name = r.get(f"name_{lang}")
+        if not name:
+            name = r.get("name_es") or r.get("name_en") or "?"
+
+        self._name.setText(name)
+        
+        # Filtramos para mostrar solo el número
+        mid = r.get('equip_model_id', '?')
+        mid_num = "".join(filter(str.isdigit, mid)) if mid != '?' else '?'
+        
+        self._id.setText(f"ID: {mid_num}")
         cat = r.get("category","?")
         alt = " (Alterado)" if r.get("is_altered") else ""
         self._cat.setText(f"Categoría: {cat}{alt}")
@@ -95,7 +106,7 @@ class SlotSelectorWidget(QWidget):
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(6)
 
-        hdr = QLabel("🔁 Asignar a slots del juego")
+        hdr = QLabel("Asignar a slots del juego")
         hdr.setStyleSheet("font-weight:bold; color:#C9A96E; font-size:12px;")
         root.addWidget(hdr)
 
@@ -214,11 +225,24 @@ class SlotSelectorWidget(QWidget):
         rows  = self._db.search_armor(query, category=cat)
         if not self._chk_alt.isChecked():
             rows = [r for r in rows if not r.get("is_altered")]
+            
+        # Obtenemos el idioma configurado
+        from src.core.config import AppConfig
+        lang = AppConfig.get("ui.language", "es")
+
         for r in rows:
             mid  = r.get("equip_model_id", "")
-            name = r.get("name_es") or r.get("name_en") or ""
-            sn   = r.get("set_name", "")
-            item = QListWidgetItem(f"{mid}  —  {name}  [{sn}]")
+            # Extraemos únicamente los números del ID (BD_M_1500 -> 1500)
+            mid_num = "".join(filter(str.isdigit, mid))
+            
+            # Nombre según el idioma elegido
+            name = r.get(f"name_{lang}")
+            if not name:
+                name = r.get("name_es") or r.get("name_en") or ""
+                
+            item = QListWidgetItem(f"{mid_num}  —  {name}")
+            item.setData(Qt.UserRole, r)
+            self._list.addItem(item)
             item.setData(Qt.UserRole, r)
             self._list.addItem(item)
 

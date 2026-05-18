@@ -73,7 +73,14 @@ class SettingsDialog(QDialog):
 
         self.chk_dark = QCheckBox("Tema oscuro")
 
+        # NUEVO: Selector de Idioma
+        from PySide6.QtWidgets import QComboBox
+        self.combo_lang = QComboBox()
+        self.combo_lang.addItem("Español", "es")
+        self.combo_lang.addItem("English", "en")
+
         ul.addRow("Tamaño de miniaturas:", self.spin_grid)
+        ul.addRow("Idioma de nombres:", self.combo_lang) # <-- AÑADIDO AL FORMULARIO
         ul.addRow(self.chk_dark)
         tabs.addTab(tab_ui, "🎨 Interfaz")
 
@@ -115,6 +122,10 @@ class SettingsDialog(QDialog):
         self.spin_grid.setValue(AppConfig.get("ui.grid_size", 140))
         self.chk_dark.setChecked(AppConfig.get("ui.dark_mode", True))
 
+        lang = AppConfig.get("ui.language", "es")
+        idx = self.combo_lang.findData(lang)
+        if idx >= 0: self.combo_lang.setCurrentIndex(idx)
+
     def _save(self):
         AppConfig.set("tools.witchybnd_path",    self.inp_witchy.text().strip())
         AppConfig.set("tools.flver_editor_path", self.inp_flver.text().strip())
@@ -123,4 +134,5 @@ class SettingsDialog(QDialog):
         AppConfig.set("project.parts_library_path", self.inp_parts_lib.text().strip())
         AppConfig.set("ui.grid_size",            self.spin_grid.value())
         AppConfig.set("ui.dark_mode",            self.chk_dark.isChecked())
+        AppConfig.set("ui.language", self.combo_lang.currentData())
         self.accept()

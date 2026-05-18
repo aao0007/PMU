@@ -22,6 +22,7 @@ class AppConfig:
             cls._init_defaults()
 
     @classmethod
+    @classmethod
     def _init_defaults(cls):
         cls._config = {
             "tools": {
@@ -31,7 +32,7 @@ class AppConfig:
             },
             "modengine2": {"root_path": ""},
             "project": {"parts_library_path": ""},
-            "ui": {"dark_mode": True, "grid_size": 140},
+            "ui": {"dark_mode": True, "grid_size": 140, "language": "es"},
         }
         cls.save()
 

@@ -19,7 +19,7 @@ class ArmorDatabase:
                     name_es        TEXT,
                     category       TEXT,
                     is_altered     INTEGER DEFAULT 0,
-                    set_name       TEXT,
+                    gender         TEXT,
                     file_name      TEXT
                 )
             """)
@@ -32,7 +32,7 @@ class ArmorDatabase:
         if category and category != "Todos":
             sql += " AND category = ?"
             params.append(category)
-        sql += " ORDER BY set_name, category, equip_model_id LIMIT 500"
+        sql += " ORDER BY set_name, category, equip_model_id"
         with sqlite3.connect(self.db_path) as conn:
             conn.row_factory = sqlite3.Row
             return [dict(r) for r in conn.execute(sql, params).fetchall()]
@@ -48,8 +48,8 @@ class ArmorDatabase:
         with sqlite3.connect(self.db_path) as conn:
             conn.execute("""
                 INSERT OR REPLACE INTO armor_parts
-                  (equip_model_id, name_en, name_es, category, is_altered, set_name, file_name)
-                VALUES (:equip_model_id,:name_en,:name_es,:category,:is_altered,:set_name,:file_name)
+                  (equip_model_id, name_en, name_es, category, is_altered, gender, file_name)
+                VALUES (:equip_model_id,:name_en,:name_es,:category,:is_altered,:gender,:file_name)
             """, record)
             conn.commit()
 

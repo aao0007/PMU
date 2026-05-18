@@ -62,8 +62,8 @@ class MainWindow(QMainWindow):
         mf.addAction("❌ Salir", self.close, "Ctrl+Q")
 
         mdb = mb.addMenu("Base de datos")
-        mdb.addAction("📥 Cargar catálogo de prueba", self._populate_db)
-        mdb.addAction("🔄 Limpiar y recargar", self._reload_db)
+        mdb.addAction("📥 Cargar catálogo desde CSV", self._populate_db)
+        mdb.addAction("🔄 Limpiar y recargar CSV", self._reload_db)
 
         mv = mb.addMenu("Visor")
         mv.addAction("Wireframe  [W]",      lambda: self._central.gl_viewer.set_wireframe(not self._central.gl_viewer.wireframe), "W")
@@ -131,9 +131,14 @@ class MainWindow(QMainWindow):
     def _post_init(self):
         self._tree.refresh()
         if self._db.count() == 0:
-            self._sb.showMessage(
-                "DB vacía — ve a Base de datos › Cargar catálogo de prueba"
-            )
+            # Auto-cargar desde el CSV si la base de datos está vacía
+            from src.services.scraper_service import ScraperService
+            scraper = ScraperService(self._db)
+            if scraper.load_from_csv():
+                self._explorer.perform_database_search("")
+                self._sb.showMessage(f"DB: {self._db.count()} registros cargados automáticamente desde CSV")
+            else:
+                self._sb.showMessage("DB vacía — coloca EquipParamProtector.csv en data/ y ve a Base de datos › Cargar catálogo")
         else:
             self._sb.showMessage(f"DB: {self._db.count()} registros cargados")
 
@@ -274,6 +279,20 @@ class MainWindow(QMainWindow):
     # Menú actions
     # ─────────────────────────────────────────────────────────────────────────
 
+    def _load_csv_db(self):
+        from src.services.scraper_service import ScraperService
+        scraper = ScraperService(self._db)
+        
+        # Ejecuta la lectura del CSV
+        if scraper.load_from_csv("data/EquipParamProtector.csv"):
+            self._explorer.perform_database_search("") # Refresca el explorador de armaduras
+            self._sb.showMessage(f"CSV cargado exitosamente. DB: {self._db.count()} registros.")
+        else:
+            QMessageBox.warning(self, "Error de Lectura", 
+                "No se pudo cargar el CSV.\n"
+                "Asegúrate de que el archivo se llama 'EquipParamProtector.csv' y está ubicado en la carpeta 'data/'.")
+            self._sb.showMessage("❌ Error cargando CSV.")
+            
     def _open_settings(self):
         dlg = SettingsDialog(self)
         if dlg.exec():
@@ -282,9 +301,12 @@ class MainWindow(QMainWindow):
 
     def _populate_db(self):
         from src.services.scraper_service import ScraperService
-        ScraperService(self._db).populate_mock_data()
-        self._explorer.perform_database_search("")
-        self._sb.showMessage(f"DB: {self._db.count()} registros.")
+        scraper = ScraperService(self._db)
+        if scraper.load_from_csv():
+            self._explorer.perform_database_search("")
+            self._sb.showMessage(f"DB: {self._db.count()} registros cargados desde CSV.")
+        else:
+            QMessageBox.warning(self, "Error", "No se pudo leer data/EquipParamProtector.csv. Verifica que exista y el formato sea correcto.")
 
     def _reload_db(self):
         import sqlite3
