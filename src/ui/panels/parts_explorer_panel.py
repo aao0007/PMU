@@ -42,8 +42,8 @@ def _make_placeholder(category: str, size: int = 96) -> QPixmap:
 
 
 class PartsExplorerPanel(QWidget):
-    model_selected  = Signal(str)   # file_name → carga 3D (doble clic)
-    armor_selected  = Signal(dict)  # record completo → panel info (un clic)
+    model_selected = Signal(str)
+    model_clicked = Signal(str)
 
     def __init__(self, db: ArmorDatabase, parent=None):
         super().__init__(parent)
@@ -117,7 +117,8 @@ class PartsExplorerPanel(QWidget):
             }
         """)
         self._grid.itemClicked.connect(self._on_click)
-        self._grid.itemDoubleClicked.connect(self._on_dbl)
+        self._grid.itemDoubleClicked.connect(self._on_double_click)
+        self._grid.itemClicked.connect(self._on_single_click)
         root.addWidget(self._grid)
 
     # ── Search ────────────────────────────────────────────────────────────────
@@ -176,7 +177,12 @@ class PartsExplorerPanel(QWidget):
         if record:
             self.armor_selected.emit(record)
 
-    def _on_dbl(self, item: QListWidgetItem):
+    def _on_double_click(self, item: QListWidgetItem):
         file_name = item.data(Qt.UserRole)
         if file_name:
             self.model_selected.emit(file_name)
+        
+    def _on_single_click(self, item: QListWidgetItem):
+        file_name = item.data(Qt.UserRole)
+        if file_name:
+            self.model_clicked.emit(file_name)

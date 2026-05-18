@@ -5,11 +5,11 @@ from pathlib import Path
 import qasync
 from PySide6.QtWidgets import (
     QMainWindow, QDockWidget, QMenuBar, QStatusBar,
-    QMessageBox, QProgressDialog, QApplication,
+    QMessageBox, QProgressDialog, QApplication, QWidget, QVBoxLayout,
 )
 from PySide6.QtCore import Qt, QTimer
 from loguru import logger
-
+from src.ui.panels.csv_info_panel import CSVInfoPanel
 from src.core.config import AppConfig
 from src.core.armor_database import ArmorDatabase
 from src.core.flver_parser import FLVERParser
@@ -23,6 +23,7 @@ from src.ui.panels.tools_panel import ToolsPanel
 from src.ui.dialogs.settings_dialog import SettingsDialog
 from src.utils.theme import apply_dark_theme
 from src.utils.async_runner import run_in_background
+from src.core.config import AppConfig
 
 TEMP_DIR = Path("data/temp_extract")
 
@@ -96,21 +97,33 @@ class MainWindow(QMainWindow):
         dock_tree.setMinimumWidth(230)
         self.addDockWidget(Qt.LeftDockWidgetArea, dock_tree)
 
-        # ── Dock derecho: herramientas ─────────────────────────────────────────
+        # ── Dock derecho: Información CSV + Herramientas ───────────────────────
+        right_container = QWidget()
+        right_layout = QVBoxLayout(right_container)
+        right_layout.setContentsMargins(0, 0, 0, 0)
+        right_layout.setSpacing(4)
+
+        # Panel de Metadatos CSV (Arriba)
+        self._csv_info = CSVInfoPanel()
+        right_layout.addWidget(self._csv_info)
+
+        # Panel de Herramientas Original (Abajo)
         self._tools = ToolsPanel(self._db)
         self._tools.set_viewer(self._central.gl_viewer)
+        right_layout.addWidget(self._tools)
 
-        dock_tools = QDockWidget("🔧  Herramientas", self)
+        dock_tools = QDockWidget("🔧  Panel de Control e Información", self)
         dock_tools.setObjectName("dock_tools")
-        dock_tools.setWidget(self._tools)
+        dock_tools.setWidget(right_container) # <-- Usamos el contenedor con ambos paneles
         dock_tools.setAllowedAreas(Qt.RightDockWidgetArea | Qt.LeftDockWidgetArea)
-        dock_tools.setMinimumWidth(200)
+        dock_tools.setMinimumWidth(230)
         dock_tools.setMaximumWidth(310)
         self.addDockWidget(Qt.RightDockWidgetArea, dock_tools)
 
         # ── Dock inferior: explorador de armaduras ─────────────────────────────
         self._explorer = PartsExplorerPanel(self._db)
         self._explorer.model_selected.connect(self._on_explorer_selected)
+        self._explorer.model_clicked.connect(self._on_explorer_clicked)
 
         dock_exp = QDockWidget("🗂  Explorador de Armaduras (DB)", self)
         dock_exp.setObjectName("dock_explorer")
@@ -298,6 +311,14 @@ class MainWindow(QMainWindow):
         if dlg.exec():
             self._tree.refresh()
             self._sb.showMessage("Configuración guardada.")
+
+    def _on_explorer_clicked(self, file_name: str):
+        stem = file_name.split(".")[0].upper()
+        rows = self._db.search_armor(stem)
+        if rows:
+            self._csv_info.update_info(rows[0])
+        else:
+            self._csv_info.update_info(None)
 
     def _populate_db(self):
         from src.services.scraper_service import ScraperService
