@@ -1,8 +1,8 @@
 # src/ui/panels/central_panel.py
 """
 Panel central:
-  Izquierda: visor 3D del modelo seleccionado en el árbol
-  Derecha:   info del juego (DB) + selector de slots para duplicar
+  Izquierda: visor 3D + toolbar de modos de render
+  Derecha:   info del modelo seleccionado + selector de slots para duplicar
 """
 from pathlib import Path
 
@@ -10,111 +10,155 @@ from PySide6.QtWidgets import (
     QWidget, QHBoxLayout, QVBoxLayout, QSplitter,
     QGroupBox, QLabel, QComboBox, QPushButton, QListWidget,
     QListWidgetItem, QLineEdit, QScrollArea, QFrame,
-    QProgressBar, QMessageBox, QFileDialog, QSizePolicy,
-    QCheckBox, QToolBar,
+    QProgressBar, QMessageBox, QFileDialog, QButtonGroup,
+    QCheckBox, QToolBar, QSizePolicy, QRadioButton,
 )
 from PySide6.QtCore import Qt, Signal, QSize, QTimer
-from PySide6.QtGui import QFont, QIcon
+from PySide6.QtGui import QFont, QIcon, QColor
 
-from src.ui.viewer3d.gl_widget import GLViewerWidget
+from src.ui.viewer3d.gl_widget import GLViewerWidget, RenderMode
 from src.core.armor_database import ArmorDatabase
 from src.core.config import AppConfig
 
 CATEGORIES   = ["Head", "Body", "Arms", "Legs"]
-CAT_LABELS   = {"Head": "🪖 Cabeza", "Body": "🥋 Cuerpo", "Arms": "🧤 Brazos", "Legs": "👢 Piernas"}
+CAT_LABELS   = {"Head": "🪖 Cabeza", "Body": "🥋 Cuerpo",
+                "Arms": "🧤 Brazos", "Legs": "👢 Piernas"}
 CAT_PREFIXES = {"Head": "hd", "Body": "bd", "Arms": "am", "Legs": "lg"}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Info card del modelo
+# Toolbar de modos de render
 # ─────────────────────────────────────────────────────────────────────────────
 
-class ModelInfoCard(QFrame):
-    def __init__(self, parent=None):
+class RenderModeBar(QWidget):
+    """Barra horizontal con botones de modo de visualización."""
+
+    def __init__(self, viewer: GLViewerWidget, parent=None):
         super().__init__(parent)
-        self.setFrameShape(QFrame.StyledPanel)
-        self.setStyleSheet("QFrame { background:#1A1A1E; border-radius:6px; }")
-        lay = QVBoxLayout(self)
-        lay.setContentsMargins(10, 8, 10, 8)
+        self._viewer = viewer
+        lay = QHBoxLayout(self)
+        lay.setContentsMargins(4, 2, 4, 2)
         lay.setSpacing(3)
 
-        self._name = QLabel("—")
-        f = self._name.font()
-        f.setBold(True)
-        f.setPointSize(12)
-        self._name.setFont(f)
-        self._name.setStyleSheet("color:#C9A96E;")
+        self._group = QButtonGroup(self)
+        self._group.setExclusive(True)
 
-        self._id   = QLabel()
-        self._set  = QLabel()
-        self._cat  = QLabel()
-        self._file = QLabel()
+        modes = [
+            (RenderMode.SOLID,      "⬛ Solid",   "Gris metálico con iluminación Phong"),
+            (RenderMode.WIRE,  "⬜ Wireframe","Malla azul sin relleno"),
+            #(RenderMode.MATCAP,     "🟤 MatCap",  "Clay rendering estilo ZBrush"),
+            (RenderMode.TEXTURED, "🌈 VColor",  "Colores por normal (FLVER Editor)"),
+        ]
+        for mode, label, tip in modes:
+            btn = QPushButton(label)
+            btn.setCheckable(True)
+            btn.setToolTip(tip)
+            btn.setFixedHeight(24)
+            btn.setStyleSheet(
+                "QPushButton{background:#1E1E22;border:1px solid #2A2A30;"
+                "border-radius:3px;font-size:11px;padding:0 6px;}"
+                "QPushButton:hover{border-color:#C9A96E66;}"
+                "QPushButton:checked{background:#1E3A5A;border-color:#C9A96E;"
+                "color:#C9A96E;font-weight:bold;}"
+            )
+            btn.clicked.connect(lambda _, m=mode: viewer.set_render_mode(m))
+            self._group.addButton(btn, mode)
+            lay.addWidget(btn)
 
-        for w in (self._id, self._set, self._cat, self._file):
-            w.setStyleSheet("color:#888; font-size:11px;")
-            w.setWordWrap(True)
+        # Marcar "Solid" como default
+        self._group.button(RenderMode.SOLID).setChecked(True)
 
-        lay.addWidget(self._name)
-        lay.addWidget(self._id)
-        lay.addWidget(self._set)
-        lay.addWidget(self._cat)
-        lay.addWidget(self._file)
+        lay.addWidget(_vsep())
 
-    def set_data(self, r: dict | None):
-        if not r:
-            self._name.setText("Sin datos en DB")
-            self._id.setText("")
-            self._set.setText("")
-            self._cat.setText("")
-            self._file.setText("")
-            return
-        
-        from src.core.config import AppConfig
-        lang = AppConfig.get("ui.language", "es")
-        name = r.get(f"name_{lang}")
-        if not name:
-            name = r.get("name_es") or r.get("name_en") or "?"
+        # Flat/Smooth
+        self._btn_flat = QPushButton("F Flat")
+        self._btn_flat.setCheckable(True)
+        self._btn_flat.setChecked(True)
+        self._btn_flat.setToolTip("Alternar Flat / Smooth shading  [F]")
+        self._btn_flat.setFixedHeight(24)
+        self._btn_flat.setStyleSheet(
+            "QPushButton{background:#1E1E22;border:1px solid #2A2A30;"
+            "border-radius:3px;font-size:11px;padding:0 6px;}"
+            "QPushButton:hover{border-color:#C9A96E66;}"
+            "QPushButton:checked{background:#2A2A14;border-color:#C9A96E88;color:#C9A96E;}"
+        )
+        self._btn_flat.toggled.connect(
+            lambda v: setattr(viewer, 'flat_shade', v) or viewer.update()
+        )
+        lay.addWidget(self._btn_flat)
 
-        self._name.setText(name)
-        
-        # Filtramos para mostrar solo el número
-        mid = r.get('equip_model_id', '?')
-        mid_num = "".join(filter(str.isdigit, mid)) if mid != '?' else '?'
-        
-        self._id.setText(f"ID: {mid_num}")
-        cat = r.get("category","?")
-        alt = " (Alterado)" if r.get("is_altered") else ""
-        self._cat.setText(f"Categoría: {cat}{alt}")
-        self._file.setText(f"Archivo: {r.get('file_name','?')}")
+        # Grid
+        self._btn_grid = QPushButton("⊞ Grid")
+        self._btn_grid.setCheckable(True)
+        self._btn_grid.setChecked(True)
+        self._btn_grid.setToolTip("Mostrar/ocultar cuadrícula")
+        self._btn_grid.setFixedHeight(24)
+        self._btn_grid.setStyleSheet(
+            "QPushButton{background:#1E1E22;border:1px solid #2A2A30;"
+            "border-radius:3px;font-size:11px;padding:0 6px;}"
+            "QPushButton:hover{border-color:#C9A96E66;}"
+            "QPushButton:checked{background:#1A2A1A;border-color:#4A8A4A;color:#7ACA7A;}"
+        )
+        self._btn_grid.toggled.connect(
+            lambda v: setattr(viewer, 'show_grid', v) or viewer.update()
+        )
+        lay.addWidget(self._btn_grid)
+
+        lay.addWidget(_vsep())
+
+        # Reset
+        btn_rst = QPushButton("↺")
+        btn_rst.setToolTip("Reset cámara  [R]")
+        btn_rst.setFixedSize(28, 24)
+        btn_rst.clicked.connect(viewer.reset_camera)
+        lay.addWidget(btn_rst)
+
+        lay.addStretch()
+
+        # Vincular cambios del viewer a la barra
+        viewer.render_mode_changed.connect(self._sync)
+
+    def _sync(self, mode: int):
+        btn = self._group.button(mode)
+        if btn:
+            btn.setChecked(True)
+
+
+def _vsep() -> QFrame:
+    sep = QFrame()
+    sep.setFrameShape(QFrame.VLine)
+    sep.setFixedWidth(1)
+    sep.setStyleSheet("background:#2A2A30;")
+    return sep
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Selector de slots para duplicación
+# Slot selector para duplicar
 # ─────────────────────────────────────────────────────────────────────────────
 
 class SlotSelectorWidget(QWidget):
-    duplicate_requested = Signal(list, Path)   # (slots: list[dict], dest: Path)
+    duplicate_requested = Signal(list, Path)
 
     def __init__(self, db: ArmorDatabase, parent=None):
         super().__init__(parent)
-        self._db   = db
-        self._src  = None
+        self._db  = db
+        self._src = None
         self._build()
 
     def _build(self):
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
-        root.setSpacing(6)
+        root.setSpacing(5)
 
-        hdr = QLabel("Asignar a slots del juego")
+        hdr = QLabel("🔁 Duplicar modelo a slots del juego")
         hdr.setStyleSheet("font-weight:bold; color:#C9A96E; font-size:12px;")
         root.addWidget(hdr)
 
-        # Pack name
+        # Pack
         row_pack = QHBoxLayout()
-        row_pack.addWidget(QLabel("Pack / subcarpeta:"))
+        row_pack.addWidget(QLabel("Pack / carpeta:"))
         self._inp_pack = QLineEdit()
-        self._inp_pack.setPlaceholderText("ej. 2B_Black  (opcional)")
+        self._inp_pack.setPlaceholderText("ej. 2B_Black (opcional)")
         row_pack.addWidget(self._inp_pack)
         root.addLayout(row_pack)
 
@@ -128,8 +172,8 @@ class SlotSelectorWidget(QWidget):
         row_cat.addWidget(self._combo)
         root.addLayout(row_cat)
 
-        # Solo alterados
-        self._chk_alt = QCheckBox("Incluir versiones alteradas")
+        # Opciones
+        self._chk_alt = QCheckBox("Incluir alterados")
         self._chk_alt.stateChanged.connect(self._reload)
         root.addWidget(self._chk_alt)
 
@@ -139,16 +183,19 @@ class SlotSelectorWidget(QWidget):
         self._search.textChanged.connect(lambda: QTimer.singleShot(200, self._reload))
         root.addWidget(self._search)
 
-        # Lista de slots
+        # Lista
         self._list = QListWidget()
         self._list.setSelectionMode(QListWidget.MultiSelection)
-        self._list.setMinimumHeight(120)
+        self._list.setMinimumHeight(110)
+        self._list.setMaximumHeight(200)
         root.addWidget(self._list)
 
         # Botones rápidos
         row_sel = QHBoxLayout()
-        btn_all  = QPushButton("Seleccionar todo el set")
+        btn_all  = QPushButton("Seleccionar set")
         btn_none = QPushButton("Limpiar")
+        btn_all.setFixedHeight(24)
+        btn_none.setFixedHeight(24)
         btn_all.clicked.connect(self._sel_set)
         btn_none.clicked.connect(self._list.clearSelection)
         row_sel.addWidget(btn_all)
@@ -161,62 +208,58 @@ class SlotSelectorWidget(QWidget):
         self._inp_dest = QLineEdit()
         self._inp_dest.setPlaceholderText("mod/parts …")
         btn_d = QPushButton("…")
-        btn_d.setFixedWidth(30)
+        btn_d.setFixedSize(28, 24)
         btn_d.clicked.connect(self._browse_dest)
         row_dst.addWidget(self._inp_dest)
         row_dst.addWidget(btn_d)
         root.addLayout(row_dst)
 
-        # Barra de progreso (oculta)
+        # Progreso
         self._prog = QProgressBar()
         self._prog.setVisible(False)
+        self._prog.setFixedHeight(10)
         root.addWidget(self._prog)
 
-        # Botón de acción
+        # Botón acción
         self._btn = QPushButton("▶  Duplicar a slots seleccionados")
         self._btn.setStyleSheet(
-            "QPushButton { background:#3A6A28; font-weight:bold; "
-            "padding:8px; font-size:12px; border-radius:4px; }"
-            "QPushButton:hover { background:#4A8A34; }"
-            "QPushButton:pressed { background:#2A5A1C; }"
+            "QPushButton{background:#2A5A1C;font-weight:bold;"
+            "padding:7px;font-size:12px;border-radius:4px;"
+            "border:1px solid #3A7A28;}"
+            "QPushButton:hover{background:#3A7A28;}"
+            "QPushButton:pressed{background:#1E3E14;}"
         )
         self._btn.clicked.connect(self._on_dup)
         root.addWidget(self._btn)
 
-    # ── public ───────────────────────────────────────────────────────────────
-
     def set_source(self, path: Path):
         self._src = path
-        # Auto-detectar categoría por prefijo
         pfx = path.name.split("_")[0].lower()
         for i in range(self._combo.count()):
             if CAT_PREFIXES.get(self._combo.itemData(i), "") == pfx:
                 self._combo.setCurrentIndex(i)
                 break
-        # Auto-rellenar destino
         me2 = AppConfig.get("modengine2.root_path", "")
         if me2:
-            parts = Path(me2) / "mod" / "parts"
-            parts.mkdir(parents=True, exist_ok=True)
-            self._inp_dest.setText(str(parts))
+            p = Path(me2) / "mod" / "parts"
+            p.mkdir(parents=True, exist_ok=True)
+            self._inp_dest.setText(str(p))
         self._reload()
 
-    def set_progress(self, v: int, m: int):
+    def set_progress(self, v, m):
         self._prog.setVisible(True)
         self._prog.setMaximum(m)
         self._prog.setValue(v)
         if v >= m:
-            QTimer.singleShot(1500, lambda: self._prog.setVisible(False))
+            QTimer.singleShot(1200, lambda: self._prog.setVisible(False))
 
-    def get_selected_slots(self) -> list[dict]:
+    def get_selected_slots(self):
         return [it.data(Qt.UserRole) for it in self._list.selectedItems()]
 
     def get_dest(self) -> Path:
         base = Path(self._inp_dest.text().strip() or ".")
         pack = self._inp_pack.text().strip()
         return base / pack if pack else base
-
-    # ── private ──────────────────────────────────────────────────────────────
 
     def _reload(self):
         self._list.clear()
@@ -225,29 +268,19 @@ class SlotSelectorWidget(QWidget):
         rows  = self._db.search_armor(query, category=cat)
         if not self._chk_alt.isChecked():
             rows = [r for r in rows if not r.get("is_altered")]
-            
-        # Obtenemos el idioma configurado
-        from src.core.config import AppConfig
-        lang = AppConfig.get("ui.language", "es")
 
+        lang = AppConfig.get("ui.language", "es")
         for r in rows:
             mid  = r.get("equip_model_id", "")
-            # Extraemos únicamente los números del ID (BD_M_1500 -> 1500)
             mid_num = "".join(filter(str.isdigit, mid))
-            
-            # Nombre según el idioma elegido
-            name = r.get(f"name_{lang}")
-            if not name:
-                name = r.get("name_es") or r.get("name_en") or ""
-                
-            item = QListWidgetItem(f"{mid_num}  —  {name}")
-            item.setData(Qt.UserRole, r)
-            self._list.addItem(item)
-            item.setData(Qt.UserRole, r)
-            self._list.addItem(item)
+            name = r.get(f"name_{lang}") or r.get("name_es") or r.get("name_en") or ""
+            sn   = r.get("set_name") or ""
+            it   = QListWidgetItem(f"{mid_num}  —  {name}  [{sn}]")
+            it.setData(Qt.UserRole, r)
+            self._list.addItem(it)
 
     def _sel_set(self):
-        sel = self._list.selectedItems()
+        sel     = self._list.selectedItems()
         ref_set = sel[0].data(Qt.UserRole).get("set_name") if sel else None
         for i in range(self._list.count()):
             it = self._list.item(i)
@@ -267,8 +300,7 @@ class SlotSelectorWidget(QWidget):
         if not self._src:
             QMessageBox.warning(self, "Sin modelo", "Abre un archivo .dcx primero.")
             return
-        dest = self.get_dest()
-        self.duplicate_requested.emit(slots, dest)
+        self.duplicate_requested.emit(slots, self.get_dest())
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -285,97 +317,69 @@ class CentralPanel(QWidget):
     def _build(self):
         root = QHBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
 
         spl = QSplitter(Qt.Horizontal)
+        spl.setHandleWidth(2)
 
         # ── Lado izquierdo: visor 3D ──────────────────────────────────────────
         left = QWidget()
         ll   = QVBoxLayout(left)
         ll.setContentsMargins(0, 0, 0, 0)
-        ll.setSpacing(2)
+        ll.setSpacing(0)
 
         self.gl_viewer = GLViewerWidget()
         ll.addWidget(self.gl_viewer, stretch=1)
 
-        # Barra de herramientas del visor
-        tb = QHBoxLayout()
-        tb.setSpacing(4)
-
-        self._btn_wire = QPushButton("⬜ Wireframe")
-        self._btn_wire.setCheckable(True)
-        self._btn_wire.setFixedHeight(26)
-        self._btn_wire.toggled.connect(self.gl_viewer.set_wireframe)
-
-        self._btn_flat = QPushButton("🔲 Flat")
-        self._btn_flat.setCheckable(True)
-        self._btn_flat.setChecked(True)
-        self._btn_flat.setFixedHeight(26)
-        self._btn_flat.toggled.connect(lambda v: setattr(self.gl_viewer, 'flat_shade', v) or self.gl_viewer.update())
-
-        self._btn_grid = QPushButton("⊞ Grid")
-        self._btn_grid.setCheckable(True)
-        self._btn_grid.setChecked(True)
-        self._btn_grid.setFixedHeight(26)
-        self._btn_grid.toggled.connect(lambda v: setattr(self.gl_viewer, 'show_grid', v) or self.gl_viewer.update())
-
-        self._btn_reset = QPushButton("↺ Reset [R]")
-        self._btn_reset.setFixedHeight(26)
-        self._btn_reset.clicked.connect(self.gl_viewer.reset_camera)
-
-        self._lbl_stats = QLabel("Sin modelo")
-        self._lbl_stats.setStyleSheet("color:#666; font-size:10px;")
-
-        for w in (self._btn_wire, self._btn_flat, self._btn_grid, self._btn_reset):
-            tb.addWidget(w)
-        tb.addStretch()
-        tb.addWidget(self._lbl_stats)
-        ll.addLayout(tb)
+        # Toolbar de render
+        self._modebar = RenderModeBar(self.gl_viewer)
+        self._modebar.setFixedHeight(32)
+        self._modebar.setStyleSheet("background:#0E0E10; border-top:1px solid #1E1E22;")
+        ll.addWidget(self._modebar)
 
         spl.addWidget(left)
 
-        # ── Lado derecho: info + slots ─────────────────────────────────────────
+        # ── Lado derecho: info del archivo + duplicador ────────────────────────
         right_scroll = QScrollArea()
         right_scroll.setWidgetResizable(True)
-        right_scroll.setMinimumWidth(300)
-        right_scroll.setMaximumWidth(400)
+        right_scroll.setMinimumWidth(270)
+        right_scroll.setMaximumWidth(360)
+        right_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
-        right_inner = QWidget()
-        rl = QVBoxLayout(right_inner)
+        right_w = QWidget()
+        rl = QVBoxLayout(right_w)
         rl.setContentsMargins(8, 8, 8, 8)
         rl.setSpacing(8)
 
-        # Archivo seleccionado
-        grp_file = QGroupBox("Archivo seleccionado")
-        gl_file  = QVBoxLayout(grp_file)
-        self._lbl_file = QLabel("(ninguno)")
+        # Archivo cargado
+        grp_file = QGroupBox("Archivo cargado en visor")
+        gfl      = QVBoxLayout(grp_file)
+        gfl.setSpacing(3)
+        self._lbl_file  = QLabel("(ninguno)")
         self._lbl_file.setWordWrap(True)
         self._lbl_file.setStyleSheet("color:#C9A96E; font-size:11px;")
-        gl_file.addWidget(self._lbl_file)
+        self._lbl_stats = QLabel()
+        self._lbl_stats.setStyleSheet("color:#555; font-size:10px;")
+        gfl.addWidget(self._lbl_file)
+        gfl.addWidget(self._lbl_stats)
         rl.addWidget(grp_file)
 
-        # Info del juego
-        grp_info = QGroupBox("Datos del juego (EquipParamProtector)")
-        gl_info  = QVBoxLayout(grp_info)
-        self._card = ModelInfoCard()
-        gl_info.addWidget(self._card)
-        rl.addWidget(grp_info)
-
         # Slot selector
-        grp_slots = QGroupBox("Duplicar modelo a slots")
-        gl_slots  = QVBoxLayout(grp_slots)
+        grp_dup = QGroupBox("Duplicar a slots")
+        gdl     = QVBoxLayout(grp_dup)
         self._slots = SlotSelectorWidget(self._db)
-        gl_slots.addWidget(self._slots)
-        rl.addWidget(grp_slots)
+        gdl.addWidget(self._slots)
+        rl.addWidget(grp_dup)
         rl.addStretch()
 
-        right_scroll.setWidget(right_inner)
+        right_scroll.setWidget(right_w)
         spl.addWidget(right_scroll)
 
         spl.setStretchFactor(0, 3)
         spl.setStretchFactor(1, 1)
         root.addWidget(spl)
 
-    # ── public API ────────────────────────────────────────────────────────────
+    # ── Public API ────────────────────────────────────────────────────────────
 
     @property
     def slot_selector(self) -> SlotSelectorWidget:
@@ -390,10 +394,6 @@ class CentralPanel(QWidget):
         self._cur = p
         self._lbl_file.setText(p.name)
         self._slots.set_source(p)
-        # Buscar info en DB
-        stem = p.name.split(".")[0].upper()
-        rows = self._db.search_armor(stem)
-        self._card.set_data(rows[0] if rows else None)
 
     def update_stats(self, n_verts: int, n_tris: int):
-        self._lbl_stats.setText(f"{n_verts:,} verts  |  {n_tris:,} tris")
+        self._lbl_stats.setText(f"{n_verts:,} vértices  ·  {n_tris:,} triángulos")
